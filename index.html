@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Brumac Dairies And Cereals</title>
+<title>Maziwa Dairy</title>
 <meta name="description" content="Herd records, daily milk log and cereal sales for the farm.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%84%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,6 +93,15 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .empty p{margin:0 0 14px}
 .sale{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line)}
 .sale:first-child{border-top:0}
+.mrow{display:grid;grid-template-columns:44px 1fr;gap:8px 12px;padding:12px 14px;border-top:1px solid var(--line);align-items:center}
+.mrow:first-child{border-top:0}
+.mrow .macts{grid-column:2;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mname{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill.admin{background:var(--green-tint);color:var(--green)}
+.switchrow{margin-top:20px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.switchrow label{display:flex;align-items:flex-start;gap:10px;font-weight:600;cursor:pointer}
+.switchrow input{margin-top:3px;accent-color:var(--green);width:18px;height:18px;flex:none}
+.switchrow p{margin:6px 0 0 28px}
 
 .total{position:sticky;bottom:12px;z-index:2;margin-top:16px;display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;background:var(--green);color:var(--on-green);border-radius:12px;padding:16px 18px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
 .total .eq{font-size:14px}
@@ -167,6 +176,7 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
       <button class="tab" role="tab" id="tab-herd" aria-controls="view-herd" aria-selected="false" data-tab="herd">Herd</button>
       <button class="tab" role="tab" id="tab-cereals" aria-controls="view-cereals" aria-selected="false" data-tab="cereals">Cereals</button>
       <button class="tab" role="tab" id="tab-summary" aria-controls="view-summary" aria-selected="false" data-tab="summary">Summary</button>
+      <button class="tab" role="tab" id="tab-members" aria-controls="view-members" aria-selected="false" data-tab="members" hidden>Members</button>
     </div>
   </header>
   <main>
@@ -176,6 +186,7 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
     <section id="view-herd" role="tabpanel" aria-labelledby="tab-herd" hidden></section>
     <section id="view-cereals" role="tabpanel" aria-labelledby="tab-cereals" hidden></section>
     <section id="view-summary" role="tabpanel" aria-labelledby="tab-summary" hidden></section>
+    <section id="view-members" role="tabpanel" aria-labelledby="tab-members" hidden></section>
   </main>
 </div>
 <dialog id="dlg" aria-label="Details"></dialog>
@@ -189,8 +200,8 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
 /* =====================================================================
    1. Paste your two Supabase values here (see README.md, step 4)
    ===================================================================== */
-const SUPABASE_URL = "https://cimzgmhemqkdqqlbxakx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";
+const SUPABASE_URL = "PASTE_YOUR_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
 
 /* ---------- Settings ---------- */
 const PRICE = 70;            // Kenyan shillings per litre of milk
@@ -213,6 +224,7 @@ const state = {
   authNote:"",
   ready:false,
   cows:[], cereals:[], recent:[], milk:{}, sales:[], loadedMonths:new Set(),
+  members:{list:[],allowAdminSignup:true,loaded:false,loading:false,error:""},
   tab:"log", date:todayStr(), month:todayStr().slice(0,7),
   draft:{}, sdraft:{}, saving:false, dlg:null
 };
@@ -363,9 +375,9 @@ async function loadProfile(){
   state.user=s.data&&s.data.session?s.data.session.user:null;
   if(!state.user){ state.profile=null; state.admin=false; return; }
   let p=null;
-  try{ p=await run(sb.from("profiles").select("name,admin_until").eq("id",state.user.id).maybeSingle()); }catch(e){}
+  try{ p=await run(sb.from("profiles").select("name,email,role,admin_until").eq("id",state.user.id).maybeSingle()); }catch(e){}
   state.profile=p;
-  state.admin=!!(p&&p.admin_until&&Date.parse(p.admin_until)>Date.now());
+  state.admin=!!(p&&p.role==="admin"&&p.admin_until&&Date.parse(p.admin_until)>Date.now());
 }
 async function loadCore(){
   const res=await Promise.all([
@@ -405,6 +417,7 @@ async function reloadAll(){
     const wasAdmin=state.admin;
     await loadCore();
     await Promise.all(Array.from(state.loadedMonths).map(loadMonth));
+    if(state.admin&&state.tab==="members") await loadMembers();
     if(wasAdmin&&!state.admin) toast("Your admin session ended. Log in as Admin again to make changes.",true);
     state.error="";
   }catch(e){}
@@ -431,20 +444,24 @@ function renderWho(){
     : "";
 }
 
+const VIEWS=["log","herd","cereals","summary","members"];
 function renderAll(){
   renderWho(); renderBanner();
   const inApp=state.auth==="in";
   $(".tabs").hidden=!inApp;
   $("#view-auth").hidden=inApp;
   if(!inApp){
-    ["log","herd","cereals","summary"].forEach(t=>{ $("#view-"+t).hidden=true; });
+    VIEWS.forEach(t=>{ $("#view-"+t).hidden=true; });
     renderAuth(); return;
   }
+  $("#tab-members").hidden=!state.admin;
+  if(state.tab==="members"&&!state.admin) state.tab="log";
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===state.tab)));
-  ["log","herd","cereals","summary"].forEach(t=>{ $("#view-"+t).hidden = state.tab!==t; });
+  VIEWS.forEach(t=>{ $("#view-"+t).hidden = state.tab!==t; });
   if(state.tab==="log") renderLog();
   else if(state.tab==="herd") renderHerd();
   else if(state.tab==="cereals") renderCereals();
+  else if(state.tab==="members") renderMembers();
   else renderSummary();
   if(state.dlg && state.dlg.mode==="detail") renderDialog();
 }
@@ -478,7 +495,7 @@ function renderAuth(){
     inner='<h2>Admin confirmation</h2><p class="sub">Enter the admin PIN to continue as an administrator.</p>'
       +'<form id="pinform" class="stack" novalidate style="margin-top:16px"><div class="field"><label for="pin">Admin PIN</label><input type="password" id="pin" inputmode="numeric" autocomplete="off" maxlength="12"></div>'
       +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Confirm PIN</button></form>'
-      +'<div class="authfoot"><button class="link" data-act="cancel-pin">Cancel and log out</button></div>';
+      +'<div class="authfoot"><button class="link" data-act="pin-normal">Continue as a normal user</button> &nbsp; <button class="link" data-act="cancel-pin">Cancel and log out</button></div>';
   } else if(state.auth==="recovery"){
     inner='<h2>Choose a new password</h2><p class="sub">Enter a new password for your account.</p>'
       +'<form id="recoveryform" class="stack" novalidate style="margin-top:16px"><div class="field"><label for="rc-pass">New password <span class="hint">(at least 8 characters)</span></label><input type="password" id="rc-pass" autocomplete="new-password"></div>'
@@ -532,6 +549,18 @@ async function submitPin(pin){
   if(r.error) throw r.error;
   return r.data||{ok:false,reason:"wrong"};
 }
+function pinMessage(r){
+  if(r.reason==="locked"){
+    const until=r.locked_until?new Date(r.locked_until).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"";
+    return "Too many wrong PINs. Try again"+(until?" after "+until:" in 15 minutes")+".";
+  }
+  if(r.reason==="not_admin") return "Your account isn't an admin. Ask an admin to change your role, or continue as a normal user.";
+  return "That PIN is incorrect.";
+}
+async function continueAsNormal(){
+  try{ await sb.rpc("end_admin_session"); }catch(e){}
+  await enterApp();
+}
 async function doPin(){
   const pin=$("#pin").value.trim(), btn=$("#authbtn");
   if(!pin) return showErr("autherr","Enter the admin PIN.");
@@ -539,10 +568,7 @@ async function doPin(){
   try{
     const r=await submitPin(pin);
     if(r.ok){ await enterApp(); return; }
-    if(r.reason==="locked"){
-      const until=r.locked_until?new Date(r.locked_until).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"";
-      showErr("autherr","Too many wrong PINs. Try again"+(until?" after "+until:" in 15 minutes")+".");
-    } else showErr("autherr","That PIN is incorrect.");
+    showErr("autherr",pinMessage(r));
   }catch(e){ showErr("autherr",friendly(e)); }
   btn.disabled=false; btn.textContent="Confirm PIN"; $("#pin").value=""; $("#pin").focus();
 }
@@ -563,10 +589,17 @@ async function doSignup(){
     state.authNote="Account created. Check your email and open the confirmation link, then log in."+(wantsAdmin?" Choose Admin when you log in to enter the PIN.":"");
     renderAuth(); return;
   }
-  let pinOk=true;
-  if(wantsAdmin){ try{ const r=await submitPin(pin); pinOk=!!r.ok; }catch(e){ pinOk=false; } }
+  let pinMsg="";
+  if(wantsAdmin){
+    try{
+      const r=await submitPin(pin);
+      if(!r.ok) pinMsg = r.reason==="wrong" ? "the PIN was wrong, so you are a normal user. Log out and log in as Admin to try again."
+        : r.reason==="locked" ? "the PIN is locked for a while after too many wrong tries, so you are a normal user."
+        : "admin sign-up is turned off, so you are a normal user. Ask an admin to make you an admin.";
+    }catch(e){ pinMsg="the PIN couldn't be checked, so you are a normal user."; }
+  }
   await enterApp();
-  if(wantsAdmin&&!pinOk) toast("Account created, but the PIN was wrong, so you are a normal user. Log out and log in as Admin to try again.",true);
+  if(pinMsg) toast("Account created, but "+pinMsg,true);
 }
 async function doForgot(){
   const email=$("#fg-email").value.trim(), btn=$("#authbtn");
@@ -593,7 +626,7 @@ async function doRecovery(){
 }
 
 async function enterApp(){
-  state.error=""; state.ready=false;
+  state.error=""; state.ready=false; state.members.loaded=false;
   await loadProfile();
   state.auth="in"; state.tab="log"; state.authNote="";
   renderAll();
@@ -610,6 +643,7 @@ function resetToLogin(){
   closeDlg();
   state.user=null; state.profile=null; state.admin=false; state.ready=false; state.error="";
   state.cows=[]; state.cereals=[]; state.recent=[]; state.milk={}; state.sales=[]; state.loadedMonths=new Set();
+  state.members={list:[],allowAdminSignup:true,loaded:false,loading:false,error:""};
   state.draft={}; state.sdraft={}; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
   renderAll();
 }
@@ -850,6 +884,63 @@ async function removeSale(id){
   renderCerealBody();
 }
 
+/* ----- Members (admins only) ----- */
+async function loadMembers(){
+  if(state.members.loading) return;
+  state.members.loading=true;
+  try{
+    const d=await run(sb.rpc("members_overview"));
+    state.members={list:d.members||[],allowAdminSignup:!!d.allow_admin_signup,loaded:true,loading:false,error:""};
+  }catch(e){
+    state.members={list:[],allowAdminSignup:true,loaded:true,loading:false,error:friendly(e)};
+  }
+  scheduleRender();
+}
+function memberRowHTML(m){
+  const isAdmin=m.role==="admin", name=m.name||m.email||"Unnamed";
+  const joined=m.created_at?fmtDate(fmtISO(new Date(m.created_at))):"";
+  const acts = m.is_me
+    ? '<span class="meta">This is you. You can\'t change your own role or remove yourself.</span>'
+    : '<button class="btn ghost small" data-act="set-role" data-id="'+esc(m.id)+'" data-role="'+(isAdmin?"user":"admin")+'">'+(isAdmin?"Make normal user":"Make admin")+'</button>'
+      +'<button class="btn danger small" data-act="ask-remove-member" data-id="'+esc(m.id)+'">Remove</button>';
+  return '<div class="mrow"><div class="chip" aria-hidden="true">'+esc(String(name).charAt(0).toUpperCase())+'</div>'
+    +'<div><div class="mname"><span class="nm">'+esc(name)+(m.is_me?" (you)":"")+'</span><span class="pill '+(isAdmin?"admin":"")+'">'+(isAdmin?"Admin":"Normal user")+'</span></div>'
+    +'<div class="meta">'+esc((m.email||"")+(joined?(m.email?", ":"")+"joined "+joined:""))+'</div></div>'
+    +'<div class="macts">'+acts+'</div></div>';
+}
+function renderMembers(){
+  const el=$("#view-members");
+  if(!state.ready||!state.admin){ el.innerHTML=""; return; }
+  const M=state.members;
+  if(!M.loaded){ loadMembers(); el.innerHTML='<div class="note">Loading members…</div>'; return; }
+  if(M.error){
+    el.innerHTML='<div class="error" role="alert">Couldn\'t load the members. '+esc(M.error)+' <button class="link" data-act="reload-members">Try again</button></div>'; return;
+  }
+  const total=M.list.length, admins=M.list.filter(m=>m.role==="admin").length, users=total-admins;
+  el.innerHTML='<div class="logbar"><div><h2>Members</h2><p class="sub">Everyone who has registered. You decide who is an admin.</p></div></div>'
+    +'<p class="sumline"><b>'+total+' registered '+(total===1?"member":"members")+'</b>: '+admins+(admins===1?" admin":" admins")+' and '+users+(users===1?" normal user":" normal users")+'.</p>'
+    +'<div class="ledger">'+M.list.map(memberRowHTML).join("")+'</div>'
+    +'<div class="switchrow"><label><input type="checkbox" id="admsignup"'+(M.allowAdminSignup?" checked":"")+'> Let new sign-ups become admins with the PIN</label>'
+    +'<p class="sub">When this is on, a new account that enters the correct admin PIN in its first 24 hours becomes an admin straight away. Turn it off once your admins are set up, so only existing admins can grant the role.</p></div>';
+}
+async function setRole(id,role){
+  try{ await run(sb.rpc("set_member_role",{p_user_id:id,p_role:role})); toast(role==="admin"?"Member is now an admin":"Member is now a normal user"); }
+  catch(e){ toast("Couldn't change the role. "+friendly(e),true); }
+  loadMembers();
+}
+async function removeMember(){
+  const id=state.dlg&&state.dlg.id, btn=document.getElementById("delbtn"), errEl=document.getElementById("delerr");
+  if(!id) return;
+  btn.disabled=true; btn.textContent="Removing…"; errEl.hidden=true;
+  try{ await run(sb.rpc("remove_member",{p_user_id:id})); closeDlg(); toast("Member removed"); loadMembers(); }
+  catch(e){ errEl.textContent="Couldn't remove the member. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Remove member"; }
+}
+async function setAdminSignup(on){
+  try{ await run(sb.rpc("set_admin_signup",{p_allow:on})); toast(on?"New sign-ups can become admins":"New sign-ups can no longer become admins"); }
+  catch(e){ toast("Couldn't change that setting. "+friendly(e),true); }
+  loadMembers();
+}
+
 /* ----- Summary ----- */
 function renderSummary(){
   const el=$("#view-summary");
@@ -915,6 +1006,7 @@ function renderDialog(){
   const d=$("#dlg"), s=state.dlg; if(!s) return;
   if(s.mode==="form"){ d.innerHTML=formHTML(s.id?findCow(s.id):null); return; }
   if(s.mode==="cereal-form"){ d.innerHTML=cerealFormHTML(s.id?findCereal(s.id):null); return; }
+  if(s.mode==="member-confirm"){ const m=state.members.list.find(x=>x.id===s.id); if(!m){ closeDlg(); return; } d.innerHTML=memberConfirmHTML(m); return; }
   if(s.mode==="cereal-confirm"){ const c=findCereal(s.id); if(!c){ closeDlg(); return; } d.innerHTML=cerealConfirmHTML(c); return; }
   const c=findCow(s.id);
   if(!c){ closeDlg(); return; }
@@ -985,6 +1077,11 @@ function cerealFormHTML(c){
     +'<div class="error" id="formerr" role="alert" hidden></div>'
     +'<div class="actions">'+(c?'<button type="button" class="btn danger" data-act="ask-delete-cereal">Delete cereal</button>':"")
     +'<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="cerealsave">Save cereal</button></div></form></div>';
+}
+function memberConfirmHTML(m){
+  return '<div class="dlg"><h2>Remove '+esc(m.name||m.email)+'?</h2><p>Their account is deleted and they can no longer log in. Milk and cereal records they entered stay. It can\'t be undone.</p>'
+    +'<div class="error" id="delerr" role="alert" hidden></div>'
+    +'<div class="actions"><button class="btn ghost" data-act="close">Keep member</button><button class="btn danger" id="delbtn" data-act="remove-member">Remove member</button></div></div>';
 }
 function cerealConfirmHTML(c){
   return '<div class="dlg"><h2>Delete '+esc(c.name)+'?</h2><p>This removes the cereal and its sales records. It can\'t be undone.</p>'
@@ -1080,7 +1177,7 @@ async function deleteCereal(){
 /* ---------- Events ---------- */
 document.addEventListener("click",e=>{
   const tab=e.target.closest("[data-tab]");
-  if(tab){ state.tab=tab.dataset.tab; renderAll(); return; }
+  if(tab){ state.tab=tab.dataset.tab; if(state.tab==="members") state.members.loaded=false; renderAll(); return; }
   const at=e.target.closest("[data-authtab]");
   if(at){ state.authTab=at.dataset.authtab; state.authNote=""; renderAuth(); return; }
   const open=e.target.closest("[data-open]");
@@ -1089,6 +1186,11 @@ document.addEventListener("click",e=>{
   switch(a.dataset.act){
     case "logout": logout(); break;
     case "cancel-pin": cancelPin(); break;
+    case "pin-normal": continueAsNormal(); break;
+    case "set-role": setRole(a.dataset.id,a.dataset.role); break;
+    case "ask-remove-member": state.dlg={mode:"member-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
+    case "remove-member": removeMember(); break;
+    case "reload-members": state.members.loaded=false; renderMembers(); break;
     case "retry": state.error=""; if(state.ready){ reloadAll(); } else { enterApp(); } break;
     case "goto-herd": state.tab="herd"; renderAll(); break;
     case "save-milk": saveMilk(); break;
@@ -1137,6 +1239,7 @@ document.addEventListener("change",e=>{
     const el=$("#view-auth"); if(el) el.dataset.key=state.auth+"|"+state.authTab+"|"+state.authNote+"|"+state.authRole;
     return;
   }
+  if(t.id==="admsignup"){ setAdminSignup(t.checked); return; }
   if(t.id!=="logdate") return;
   const v=t.value;
   if(!v){ t.value=state.date; return; }
