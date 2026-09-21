@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brumac Dairies And Cereals</title>
+<meta name="description" content="Herd records, daily milk log and cereal sales for the farm.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%84%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F1F4EF; --surface:#FFFFFF; --surface-2:#E7ECE5; --ink:#25322B; --ink-soft:#56645A;
+  --line:#D3DBD1; --edge:#7C8A7F;
+  --green:#2D6A4F; --on-green:#FFFFFF; --green-tint:#DBEADF;
+  --amber:#7A5000; --amber-tint:#F5E6C2;
+  --red:#A3352B; --red-tint:#F6DCD8;
+  --serif:"Young Serif", Georgia, "Times New Roman", serif;
+  --sans:"Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#111814; --surface:#19221D; --surface-2:#222D27; --ink:#E4ECE6; --ink-soft:#9FAEA4;
+    --line:#2C3932; --edge:#647568;
+    --green:#6CC091; --on-green:#0D1A12; --green-tint:#1E3A2B;
+    --amber:#E8BE6A; --amber-tint:#3A2F14;
+    --red:#F0958B; --red-tint:#3F1E1B;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--sans)}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+legend{font-size:14px;font-weight:600;padding:0;margin-bottom:4px}
+.wrap{max-width:820px;margin:0 auto;padding:0 20px}
+
+.top{padding-top:22px}
+.top-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font:400 28px/1.1 var(--serif);letter-spacing:-.01em}
+.who{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.uname{font-weight:600}
+.role{display:inline-block;padding:3px 11px;border-radius:999px;background:var(--green-tint);color:var(--green);font-weight:600;font-size:14px}
+.tabs{display:flex;gap:4px;margin-top:18px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{background:none;border:0;padding:10px 14px;font-weight:600;color:var(--ink-soft);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;min-height:44px;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--green)}
+.tab:focus-visible{outline:2px solid var(--green);outline-offset:-2px;border-radius:6px}
+
+main{padding:24px 0 96px}
+h2{font:400 22px/1.2 var(--serif)}
+.sub{color:var(--ink-soft);margin:4px 0 0}
+.logbar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.field label{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+.field .hint{font-weight:400;color:var(--ink-soft)}
+input[type=date],input[type=text],input[type=email],input[type=number],input[type=password],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--edge);border-radius:8px;background:var(--surface);min-height:44px}
+textarea{min-height:76px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+#logdate{width:auto}
+
+.note{padding:10px 14px;border-radius:8px;background:var(--surface-2);margin-bottom:14px}
+.error{padding:10px 14px;border-radius:8px;background:var(--red-tint);color:var(--red);margin-top:12px;font-weight:500}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border-radius:8px;border:1px solid var(--green);background:var(--green);color:var(--on-green);font-weight:600;cursor:pointer;min-height:44px}
+.btn.ghost{background:transparent;color:var(--green)}
+.btn.danger{background:transparent;color:var(--red);border-color:var(--red)}
+.btn.small{padding:6px 12px;min-height:36px;font-size:14px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.link{background:none;border:0;padding:6px 0 0;color:var(--green);font-weight:600;cursor:pointer;text-decoration:underline;font-size:14px}
+
+.ledger{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row,.cow{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--line)}
+.row:first-child,.cow:first-child{border-top:0}
+.cow{width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;cursor:pointer}
+.cow:hover{background:var(--surface-2)}
+.cow:focus-visible{outline-offset:-3px}
+.coat{display:block;flex:none;border-radius:50%}
+.chip{width:44px;height:44px;border-radius:50%;background:var(--amber-tint);color:var(--amber);display:grid;place-items:center;font:400 20px/1 var(--serif)}
+.nm{font-weight:600}
+.meta{font-size:14px;color:var(--ink-soft)}
+.entry{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.lit{display:flex;align-items:center;gap:6px;font-weight:600}
+.lit input{width:96px;text-align:right;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.kes{font-size:13px;color:var(--amber);font-variant-numeric:tabular-nums;min-height:1.4em;font-weight:600}
+.tags{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--surface-2);color:var(--ink-soft);white-space:nowrap}
+.pill.milking{background:var(--green-tint);color:var(--green)}
+.pill.dry{background:var(--amber-tint);color:var(--amber)}
+.pill.due{background:var(--red-tint);color:var(--red)}
+.empty{padding:32px 18px;text-align:center;color:var(--ink-soft)}
+.empty p{margin:0 0 14px}
+.sale{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line)}
+.sale:first-child{border-top:0}
+
+.total{position:sticky;bottom:12px;z-index:2;margin-top:16px;display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;background:var(--green);color:var(--on-green);border-radius:12px;padding:16px 18px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.total .eq{font-size:14px}
+.total .big{font:400 32px/1.15 var(--serif);font-variant-numeric:tabular-nums}
+.total .btn{background:var(--on-green);color:var(--green);border-color:var(--on-green)}
+.total .btn[disabled]{opacity:.45}
+
+.chartwrap{margin:14px 0 22px}
+.ymax{font-size:13px;color:var(--ink-soft);margin-bottom:4px;min-height:1.3em}
+.bars{display:flex;align-items:flex-end;gap:3px;height:120px;border-bottom:1px solid var(--edge)}
+.bar{flex:1;background:var(--green);border-radius:3px 3px 0 0;min-width:2px}
+.bar.zero{background:transparent}
+.xl{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-soft);margin-top:4px}
+.monthbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.monthbar .lbl{font:400 22px/1.2 var(--serif)}
+.monthbtns{display:flex;gap:8px}
+.scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:400px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 14px;text-align:right;border-top:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+thead th{border-top:0;font-size:14px;color:var(--ink-soft);font-weight:600}
+tfoot td{font-weight:700;background:var(--surface-2)}
+.sumline{margin:10px 0 14px;font-size:18px}
+.sumline b{font-weight:700}
+.sec{font:400 18px/1.3 var(--serif);margin:28px 0 8px}
+
+.auth{max-width:440px;margin:24px auto 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px}
+.auth .steps{margin:12px 0 0;padding-left:20px}
+.auth .steps li{margin-bottom:6px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--surface-2);padding:4px;border-radius:10px;margin:16px 0}
+.seg button{border:0;background:transparent;padding:9px;border-radius:8px;font-weight:600;color:var(--ink-soft);cursor:pointer;min-height:44px}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.stack{display:grid;gap:14px}
+.stack .btn{width:100%}
+.authfoot{margin-top:14px;text-align:center}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--edge);border-radius:8px;cursor:pointer;min-height:44px;font-weight:600;background:var(--surface)}
+.opt input{accent-color:var(--green);margin:0}
+.opt:has(input:checked){border-color:var(--green);background:var(--green-tint);color:var(--green)}
+.opt:has(input:focus-visible){outline:2px solid var(--green);outline-offset:2px}
+
+dialog{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--surface);color:var(--ink);width:min(580px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto}
+dialog::backdrop{background:rgba(10,20,14,.55)}
+.dlg{padding:22px}
+.dhead{display:flex;gap:14px;align-items:center;margin-bottom:16px}
+.dhead h2{margin:0}
+.facts{display:grid;grid-template-columns:minmax(120px,auto) 1fr;gap:8px 18px;margin:0 0 18px}
+.facts dt{color:var(--ink-soft)}
+.facts dd{margin:0;overflow-wrap:anywhere}
+.facts .none{color:var(--ink-soft);font-style:italic}
+.block{margin:0 0 18px}
+.block h3{font:400 17px/1.3 var(--serif);margin-bottom:4px}
+.block p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid2 .full{grid-column:1/-1}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}.facts{grid-template-columns:1fr;gap:0}.facts dd{margin-bottom:10px}}
+
+#toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;font-weight:600;z-index:60;max-width:calc(100vw - 32px)}
+#toast.err{background:var(--red);color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="top-row">
+      <h1 class="brand" id="farmname">Maziwa Dairy</h1>
+      <div class="who" id="who"></div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Sections" hidden>
+      <button class="tab" role="tab" id="tab-log" aria-controls="view-log" aria-selected="true" data-tab="log">Milk log</button>
+      <button class="tab" role="tab" id="tab-herd" aria-controls="view-herd" aria-selected="false" data-tab="herd">Herd</button>
+      <button class="tab" role="tab" id="tab-cereals" aria-controls="view-cereals" aria-selected="false" data-tab="cereals">Cereals</button>
+      <button class="tab" role="tab" id="tab-summary" aria-controls="view-summary" aria-selected="false" data-tab="summary">Summary</button>
+    </div>
+  </header>
+  <main>
+    <div id="banner"></div>
+    <section id="view-auth" hidden></section>
+    <section id="view-log" role="tabpanel" aria-labelledby="tab-log" hidden></section>
+    <section id="view-herd" role="tabpanel" aria-labelledby="tab-herd" hidden></section>
+    <section id="view-cereals" role="tabpanel" aria-labelledby="tab-cereals" hidden></section>
+    <section id="view-summary" role="tabpanel" aria-labelledby="tab-summary" hidden></section>
+  </main>
+</div>
+<dialog id="dlg" aria-label="Details"></dialog>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   1. Paste your two Supabase values here (see README.md, step 4)
+   ===================================================================== */
+const SUPABASE_URL = "https://cimzgmhemqkdqqlbxakx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";
+
+/* ---------- Settings ---------- */
+const PRICE = 70;            // Kenyan shillings per litre of milk
+const GESTATION_DAYS = 283;  // used for the expected calving date
+const MAX_LITRES = 100;      // sanity limit for one cow in one day
+const MAX_KG = 100000;       // sanity limit for one cereal sale
+
+const STATUSES = [["milking","Milking"],["dry","Dry"],["heifer","Heifer"],["sold","Sold"],["deceased","Deceased"]];
+const PREG = [["unchecked","Not yet checked"],["pregnant","Confirmed pregnant"],["open","Not pregnant"]];
+const BREEDS = ["Friesian","Ayrshire","Guernsey","Jersey","Sahiwal","Crossbreed"];
+
+/* ---------- State ---------- */
+const configured = !/PASTE_YOUR/.test(SUPABASE_URL+SUPABASE_ANON_KEY) && /^https?:\/\//.test(SUPABASE_URL) && SUPABASE_ANON_KEY.length>20;
+let sb=null;
+const state = {
+  user:null, profile:null, admin:false, error:"", channel:null, recovery:false,
+  auth:"loading",      // loading | config | out | pin | recovery | in
+  authTab:"login",     // login | signup | forgot
+  authRole:"user",     // user | admin  (choice on the login and signup forms)
+  authNote:"",
+  ready:false,
+  cows:[], cereals:[], recent:[], milk:{}, sales:[], loadedMonths:new Set(),
+  tab:"log", date:todayStr(), month:todayStr().slice(0,7),
+  draft:{}, sdraft:{}, saving:false, dlg:null
+};
+
+/* ---------- Helpers ---------- */
+const $ = s => document.querySelector(s);
+function pad(n){ return String(n).padStart(2,"0"); }
+function fmtISO(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function todayStr(){ return fmtISO(new Date()); }
+function parseDate(s){ const p=s.split("-").map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function addDays(s,n){ const d=parseDate(s); d.setDate(d.getDate()+n); return fmtISO(d); }
+function daysBetween(a,b){
+  const A=parseDate(a), B=parseDate(b);
+  return Math.round((Date.UTC(B.getFullYear(),B.getMonth(),B.getDate())-Date.UTC(A.getFullYear(),A.getMonth(),A.getDate()))/86400000);
+}
+function fmtDate(s,opts){ return parseDate(s).toLocaleDateString("en-GB",opts||{day:"numeric",month:"short",year:"numeric"}); }
+function fmtTime(ts){ return new Date(ts).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); }
+function monthLabel(m){ const p=m.split("-").map(Number); return new Date(p[0],p[1]-1,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"}); }
+function shiftMonth(m,delta){ const p=m.split("-").map(Number); const d=new Date(p[0],p[1]-1+delta,1); return d.getFullYear()+"-"+pad(d.getMonth()+1); }
+function daysInMonth(m){ const p=m.split("-").map(Number); return new Date(p[0],p[1],0).getDate(); }
+function monthOf(date){ return date.slice(0,7); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function round2(n){ return Math.round(n*100)/100; }
+function num(n){ return round2(n).toLocaleString("en-GB",{maximumFractionDigits:2}); }
+function fmtL(n){ return num(n); }
+function fmtKES(n){ return "KES "+num(n); }
+function label(list,key){ const f=list.find(x=>x[0]===key); return f?f[1]:""; }
+function findCow(id){ return state.cows.find(c=>c.id===id); }
+function findCereal(id){ return state.cereals.find(c=>c.id===id); }
+function cowLabel(c){ return c.name || ("Tag "+c.tag); }
+
+function ageText(dob){
+  if(!dob) return "";
+  const b=parseDate(dob), t=new Date();
+  let months=(t.getFullYear()-b.getFullYear())*12+(t.getMonth()-b.getMonth());
+  if(t.getDate()<b.getDate()) months--;
+  if(months<0) return "";
+  if(months===0) return "under 1 month";
+  const y=Math.floor(months/12), m=months%12;
+  if(y===0) return m+(m===1?" month":" months");
+  return y+(y===1?" year":" years")+(m?" "+m+(m===1?" month":" months"):"");
+}
+function dueInfo(c){
+  if(!c.insemination || c.pregnancy==="open") return null;
+  if(c.lastCalving && c.lastCalving>=c.insemination) return null;
+  const due=addDays(c.insemination,GESTATION_DAYS);
+  return {due:due, days:daysBetween(todayStr(),due)};
+}
+function dueChip(c){
+  const d=dueInfo(c); if(!d) return "";
+  if(d.days>=0 && d.days<=30) return '<span class="pill due">'+(d.days===0?"Calving today":"Calving in "+d.days+(d.days===1?" day":" days"))+'</span>';
+  if(d.days<0 && d.days>=-21) return '<span class="pill due">Due '+(-d.days)+((-d.days)===1?" day":" days")+' ago</span>';
+  return "";
+}
+function statusPill(c){ return '<span class="pill '+esc(c.status||"")+'">'+esc(label(STATUSES,c.status)||"No status")+'</span>'; }
+
+function friendly(e){
+  const m=(e&&e.message)||"", c=e&&e.code;
+  if(c==="23505") return "That tag or name is already in use.";
+  if(c==="42501"||/row-level security|permission denied/i.test(m)) return "You don't have permission for that. If you are an admin, log out and log in as Admin again.";
+  if(/Invalid login credentials/i.test(m)) return "Email or password is incorrect.";
+  if(/Email not confirmed/i.test(m)) return "Confirm your email first using the link we sent, then log in.";
+  if(/already registered/i.test(m)) return "An account with this email already exists. Log in instead.";
+  if(/rate limit|too many/i.test(m)) return "Too many tries. Wait a minute and try again.";
+  if(/Failed to fetch|NetworkError|network/i.test(m)) return "Can't reach the server. Check your internet connection.";
+  return m||"Something went wrong. Try again.";
+}
+
+/* ---------- Data mapping (database rows <-> page objects) ---------- */
+function cowFromRow(r){
+  return {id:r.id,tag:r.tag||"",name:r.name||"",breed:r.breed||"",dob:r.dob||"",status:r.status,
+    lastCalving:r.last_calving||"",insemination:r.insemination||"",bull:r.bull||"",pregnancy:r.pregnancy,
+    weight:r.weight_kg==null?"":Number(r.weight_kg),health:r.health||"",notes:r.notes||""};
+}
+function cowToRow(f){
+  return {tag:f.tag,name:f.name||null,breed:f.breed||null,dob:f.dob||null,status:f.status,
+    last_calving:f.lastCalving||null,insemination:f.insemination||null,bull:f.bull||null,pregnancy:f.pregnancy,
+    weight_kg:f.weight!==""?parseFloat(f.weight):null,health:f.health||null,notes:f.notes||null};
+}
+function cerealFromRow(r){ return {id:r.id,name:r.name,price:Number(r.price_per_kg),qty:Number(r.qty_kg)}; }
+function saleFromRow(r){ return {id:r.id,cerealId:r.cereal_id,kg:Number(r.kg),p:Number(r.price_per_kg),d:r.sold_on,ts:Date.parse(r.created_at)||0}; }
+
+/* ---------- Milk and cereal lookups ---------- */
+function litresFor(cowId,date){ const v=state.milk[cowId+"|"+date]; return typeof v==="number"?v:null; }
+function monthEntries(cowId,month){
+  const out={}, pre=cowId+"|"+month;
+  for(const k in state.milk) if(k.startsWith(pre)) out[k.slice(cowId.length+1)]=state.milk[k];
+  return out;
+}
+function sortedCows(list){
+  const rank={milking:0,dry:1,heifer:2,sold:3,deceased:4};
+  return list.slice().sort((a,b)=>{
+    const d=(rank[a.status]!=null?rank[a.status]:5)-(rank[b.status]!=null?rank[b.status]:5);
+    if(d!==0) return d;
+    return String(a.name||a.tag||"").localeCompare(String(b.name||b.tag||""),undefined,{numeric:true});
+  });
+}
+function loggableCows(){ return sortedCows(state.cows.filter(c=>c.status!=="sold"&&c.status!=="deceased")); }
+function sortedCereals(){ return state.cereals.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))); }
+
+/* ---------- Cow coat avatar (unique Friesian-style patches per cow) ---------- */
+function hash(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function rng(seed){ let a=seed; return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return((t^t>>>14)>>>0)/4294967296; }; }
+let avN=0;
+function coat(seed,size){
+  const r=rng(hash(String(seed))), id="cl"+(avN++), n=2+Math.floor(r()*3);
+  let blobs="";
+  const mid=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];
+  for(let i=0;i<n;i++){
+    const cx=8+r()*32, cy=8+r()*32, base=6+r()*9, k=7, pts=[];
+    for(let j=0;j<k;j++){ const a=j/k*Math.PI*2, rad=base*(0.6+r()*0.7); pts.push([cx+Math.cos(a)*rad,cy+Math.sin(a)*rad]); }
+    const m0=mid(pts[k-1],pts[0]);
+    let d="M"+m0[0].toFixed(1)+" "+m0[1].toFixed(1);
+    for(let j=0;j<k;j++){ const p=pts[j], q=pts[(j+1)%k], m=mid(p,q); d+="Q"+p[0].toFixed(1)+" "+p[1].toFixed(1)+" "+m[0].toFixed(1)+" "+m[1].toFixed(1); }
+    blobs+='<path d="'+d+'Z" fill="#232B27"/>';
+  }
+  return '<svg class="coat" width="'+size+'" height="'+size+'" viewBox="0 0 48 48" aria-hidden="true"><defs><clipPath id="'+id+'"><circle cx="24" cy="24" r="23"/></clipPath></defs><g clip-path="url(#'+id+')"><rect width="48" height="48" fill="#F7F7F1"/>'+blobs+'</g><circle cx="24" cy="24" r="23" fill="none" style="stroke:var(--edge)" stroke-width="1.5"/></svg>';
+}
+
+/* ---------- Small UI helpers ---------- */
+let toastT;
+function toast(msg,isErr){
+  const t=$("#toast"); t.textContent=msg; t.className=isErr?"err":""; t.hidden=false;
+  clearTimeout(toastT); toastT=setTimeout(()=>{ t.hidden=true; },isErr?6000:3200);
+}
+function bars(items,aria,first,last){
+  const max=Math.max(0,...items.map(i=>i.v)), top=max>0?max:1;
+  return '<div class="chartwrap"><div class="ymax">'+(max>0?"Most in a day: "+fmtL(max)+" L":"")+'</div>'
+    +'<div class="bars" role="img" aria-label="'+esc(aria)+'">'
+    +items.map(i=>'<div class="bar'+(i.v>0?"":" zero")+'" style="height:'+(i.v>0?Math.max(3,i.v/top*100):0)+'%" title="'+esc(i.t)+'"></div>').join("")
+    +'</div><div class="xl"><span>'+esc(first)+'</span><span>'+esc(last)+'</span></div></div>';
+}
+function showErr(id,msg){ const e=document.getElementById(id); if(e){ e.textContent=msg; e.hidden=false; } }
+
+/* ---------- Database access ---------- */
+async function run(p){ const r=await p; if(r.error) throw r.error; return r.data; }
+async function fetchAll(build){
+  const out=[], size=1000;
+  for(let from=0;;from+=size){
+    const rows=await run(build(from,from+size-1));
+    out.push.apply(out,rows);
+    if(rows.length<size) break;
+  }
+  return out;
+}
+async function loadProfile(){
+  const s=await sb.auth.getSession();
+  state.user=s.data&&s.data.session?s.data.session.user:null;
+  if(!state.user){ state.profile=null; state.admin=false; return; }
+  let p=null;
+  try{ p=await run(sb.from("profiles").select("name,admin_until").eq("id",state.user.id).maybeSingle()); }catch(e){}
+  state.profile=p;
+  state.admin=!!(p&&p.admin_until&&Date.parse(p.admin_until)>Date.now());
+}
+async function loadCore(){
+  const res=await Promise.all([
+    run(sb.from("cows").select("*").order("tag")),
+    run(sb.from("cereals").select("*").order("name")),
+    run(sb.from("cereal_sales").select("*").order("created_at",{ascending:false}).limit(12))
+  ]);
+  state.cows=res[0].map(cowFromRow);
+  state.cereals=res[1].map(cerealFromRow);
+  state.recent=res[2].map(saleFromRow);
+  await loadProfile();
+}
+async function loadMonth(m){
+  const start=m+"-01", end=m+"-"+pad(daysInMonth(m));
+  const res=await Promise.all([
+    fetchAll((a,b)=>sb.from("milk_entries").select("cow_id,entry_date,litres").gte("entry_date",start).lte("entry_date",end).order("entry_date").order("cow_id").range(a,b)),
+    fetchAll((a,b)=>sb.from("cereal_sales").select("*").gte("sold_on",start).lte("sold_on",end).order("created_at").order("id").range(a,b))
+  ]);
+  for(const k of Object.keys(state.milk)) if(k.split("|")[1].slice(0,7)===m) delete state.milk[k];
+  res[0].forEach(r=>{ state.milk[r.cow_id+"|"+r.entry_date]=Number(r.litres); });
+  state.sales=state.sales.filter(s=>monthOf(s.d)!==m).concat(res[1].map(saleFromRow));
+  state.loadedMonths.add(m);
+}
+const loadingMonths=new Set();
+async function ensureMonth(m){
+  if(state.loadedMonths.has(m)||loadingMonths.has(m)) return;
+  loadingMonths.add(m);
+  try{ await loadMonth(m); }catch(e){ state.error=friendly(e); }
+  loadingMonths.delete(m);
+  scheduleRender();
+}
+let reloading=false;
+async function reloadAll(){
+  if(reloading||state.auth!=="in"||!state.ready) return;
+  reloading=true;
+  try{
+    const wasAdmin=state.admin;
+    await loadCore();
+    await Promise.all(Array.from(state.loadedMonths).map(loadMonth));
+    if(wasAdmin&&!state.admin) toast("Your admin session ended. Log in as Admin again to make changes.",true);
+    state.error="";
+  }catch(e){}
+  reloading=false; scheduleRender();
+}
+let reloadT;
+function scheduleReload(){ clearTimeout(reloadT); reloadT=setTimeout(reloadAll,500); }
+function subscribeRealtime(){
+  if(state.channel||!sb.channel) return;
+  try{ state.channel=sb.channel("maziwa-changes").on("postgres_changes",{event:"*",schema:"public"},scheduleReload).subscribe(); }catch(e){}
+}
+function unsubscribeRealtime(){
+  if(state.channel){ try{ sb.removeChannel(state.channel); }catch(e){} state.channel=null; }
+}
+setInterval(()=>{ if(!document.hidden&&!state.saving) reloadAll(); },30000);
+
+/* ---------- Rendering ---------- */
+let rafId=0;
+function scheduleRender(){ if(rafId) return; rafId=requestAnimationFrame(()=>{ rafId=0; renderAll(); }); }
+
+function renderWho(){
+  $("#who").innerHTML = state.auth==="in"
+    ? '<span class="role">'+(state.admin?"Admin":"Member")+'</span><span class="uname">'+esc((state.profile&&state.profile.name)||(state.user&&state.user.email)||"")+'</span><button class="btn ghost small" data-act="logout">Log out</button>'
+    : "";
+}
+
+function renderAll(){
+  renderWho(); renderBanner();
+  const inApp=state.auth==="in";
+  $(".tabs").hidden=!inApp;
+  $("#view-auth").hidden=inApp;
+  if(!inApp){
+    ["log","herd","cereals","summary"].forEach(t=>{ $("#view-"+t).hidden=true; });
+    renderAuth(); return;
+  }
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===state.tab)));
+  ["log","herd","cereals","summary"].forEach(t=>{ $("#view-"+t).hidden = state.tab!==t; });
+  if(state.tab==="log") renderLog();
+  else if(state.tab==="herd") renderHerd();
+  else if(state.tab==="cereals") renderCereals();
+  else renderSummary();
+  if(state.dlg && state.dlg.mode==="detail") renderDialog();
+}
+
+function renderBanner(){
+  let msg="", cls="note", retry=false;
+  if(state.error){ cls="error"; msg=state.error; retry=state.auth==="in"; }
+  else if(state.auth==="loading"){ msg="Loading…"; }
+  else if(state.auth==="in" && !state.ready){ msg="Loading farm records…"; }
+  $("#banner").innerHTML = msg ? '<div class="'+cls+'" role="status">'+esc(msg)+(retry?' <button class="link" data-act="retry">Try again</button>':"")+'</div>' : "";
+}
+
+/* ----- Log in, sign up, admin PIN ----- */
+function roleChoice(name,legend){
+  return '<fieldset><legend>'+legend+'</legend><div class="roles">'
+    +'<label class="opt"><input type="radio" name="role" value="user"'+(state.authRole==="user"?" checked":"")+'> Normal user</label>'
+    +'<label class="opt"><input type="radio" name="role" value="admin"'+(state.authRole==="admin"?" checked":"")+'> Admin</label></div></fieldset>';
+}
+function renderAuth(){
+  const el=$("#view-auth");
+  if(state.auth==="loading"){ el.innerHTML=""; el.dataset.key=""; return; }
+  const key=state.auth+"|"+state.authTab+"|"+state.authNote+"|"+state.authRole;
+  if(el.dataset.key===key) return;
+  el.dataset.key=key;
+  const note=state.authNote?'<div class="note" role="status">'+esc(state.authNote)+'</div>':"";
+  let inner="";
+  if(state.auth==="config"){
+    inner='<h2>Connect the database</h2><p class="sub">This site needs your Supabase project details before it can start.</p>'
+      +'<ol class="steps"><li>Open <b>index.html</b> in a text editor.</li><li>Paste your Project URL and anon key near the top of the script.</li><li>Save, then reload this page.</li></ol><p class="sub">The README.md file explains each step.</p>';
+  } else if(state.auth==="pin"){
+    inner='<h2>Admin confirmation</h2><p class="sub">Enter the admin PIN to continue as an administrator.</p>'
+      +'<form id="pinform" class="stack" novalidate style="margin-top:16px"><div class="field"><label for="pin">Admin PIN</label><input type="password" id="pin" inputmode="numeric" autocomplete="off" maxlength="12"></div>'
+      +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Confirm PIN</button></form>'
+      +'<div class="authfoot"><button class="link" data-act="cancel-pin">Cancel and log out</button></div>';
+  } else if(state.auth==="recovery"){
+    inner='<h2>Choose a new password</h2><p class="sub">Enter a new password for your account.</p>'
+      +'<form id="recoveryform" class="stack" novalidate style="margin-top:16px"><div class="field"><label for="rc-pass">New password <span class="hint">(at least 8 characters)</span></label><input type="password" id="rc-pass" autocomplete="new-password"></div>'
+      +'<div class="field"><label for="rc-pass2">Confirm new password</label><input type="password" id="rc-pass2" autocomplete="new-password"></div>'
+      +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Save password</button></form>';
+  } else if(state.authTab==="forgot"){
+    inner='<h2>Forgot your password?</h2><p class="sub">Enter your email and we will send you a link to choose a new one.</p>'+note
+      +'<form id="forgotform" class="stack" novalidate style="margin-top:16px"><div class="field"><label for="fg-email">Email</label><input type="email" id="fg-email" autocomplete="email"></div>'
+      +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Send reset link</button></form>'
+      +'<div class="authfoot"><button class="link" data-authtab="login">Back to log in</button></div>';
+  } else {
+    const tab=state.authTab;
+    const seg='<div class="seg" role="tablist" aria-label="Log in or sign up"><button role="tab" data-authtab="login" aria-selected="'+(tab==="login")+'">Log in</button><button role="tab" data-authtab="signup" aria-selected="'+(tab==="signup")+'">Sign up</button></div>';
+    let form;
+    if(tab==="login"){
+      form='<form id="loginform" class="stack" novalidate><div class="field"><label for="li-email">Email</label><input type="email" id="li-email" autocomplete="email"></div>'
+        +'<div class="field"><label for="li-pass">Password</label><input type="password" id="li-pass" autocomplete="current-password"></div>'
+        +roleChoice("role","Log in as")+'<p class="sub" style="margin:-6px 0 0">Admins are asked for a PIN after their password.</p>'
+        +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Log in</button></form>'
+        +'<div class="authfoot"><button class="link" data-authtab="forgot">Forgot your password?</button></div>';
+    } else {
+      form='<form id="signupform" class="stack" novalidate><div class="field"><label for="su-name">Your name</label><input type="text" id="su-name" autocomplete="name" maxlength="60"></div>'
+        +'<div class="field"><label for="su-email">Email</label><input type="email" id="su-email" autocomplete="email"></div>'
+        +'<div class="field"><label for="su-pass">Password <span class="hint">(at least 8 characters)</span></label><input type="password" id="su-pass" autocomplete="new-password"></div>'
+        +'<div class="field"><label for="su-pass2">Confirm password</label><input type="password" id="su-pass2" autocomplete="new-password"></div>'
+        +roleChoice("role","Sign up as")
+        +'<div class="field" id="pinfield"'+(state.authRole==="admin"?"":" hidden")+'><label for="su-pin">Admin PIN</label><input type="password" id="su-pin" inputmode="numeric" autocomplete="off" maxlength="12"></div>'
+        +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Create account</button></form>';
+    }
+    inner='<h2>'+(tab==="login"?"Log in":"Create your account")+'</h2><p class="sub">See the herd, record milk and sell cereals.</p>'+seg+note+form;
+  }
+  el.innerHTML='<div class="auth">'+inner+'</div>';
+  const first=el.querySelector("input[type=email],input[type=password],input[type=text]"); if(first&&state.auth!=="config") try{ first.focus(); }catch(e){}
+}
+
+function validEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+async function doLogin(){
+  const email=$("#li-email").value.trim(), pass=$("#li-pass").value, btn=$("#authbtn");
+  if(!validEmail(email)||!pass) return showErr("autherr","Enter your email and password.");
+  $("#autherr").hidden=true; btn.disabled=true; btn.textContent="Logging in…";
+  try{
+    await run(sb.auth.signInWithPassword({email:email,password:pass}));
+  }catch(e){ showErr("autherr",friendly(e)); btn.disabled=false; btn.textContent="Log in"; return; }
+  if(state.authRole==="admin"){ state.authNote=""; state.auth="pin"; renderAll(); return; }
+  try{ await sb.rpc("end_admin_session"); }catch(e){}
+  await enterApp();
+}
+async function submitPin(pin){
+  const r=await sb.rpc("verify_admin_pin",{p_pin:pin});
+  if(r.error) throw r.error;
+  return r.data||{ok:false,reason:"wrong"};
+}
+async function doPin(){
+  const pin=$("#pin").value.trim(), btn=$("#authbtn");
+  if(!pin) return showErr("autherr","Enter the admin PIN.");
+  $("#autherr").hidden=true; btn.disabled=true; btn.textContent="Checking…";
+  try{
+    const r=await submitPin(pin);
+    if(r.ok){ await enterApp(); return; }
+    if(r.reason==="locked"){
+      const until=r.locked_until?new Date(r.locked_until).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"";
+      showErr("autherr","Too many wrong PINs. Try again"+(until?" after "+until:" in 15 minutes")+".");
+    } else showErr("autherr","That PIN is incorrect.");
+  }catch(e){ showErr("autherr",friendly(e)); }
+  btn.disabled=false; btn.textContent="Confirm PIN"; $("#pin").value=""; $("#pin").focus();
+}
+async function doSignup(){
+  const name=$("#su-name").value.trim(), email=$("#su-email").value.trim(), p=$("#su-pass").value, p2=$("#su-pass2").value;
+  const wantsAdmin=state.authRole==="admin", pin=$("#su-pin").value.trim(), btn=$("#authbtn");
+  if(name.length<2) return showErr("autherr","Enter your name.");
+  if(!validEmail(email)) return showErr("autherr","Enter a valid email address.");
+  if(p.length<8) return showErr("autherr","Password must be at least 8 characters.");
+  if(p!==p2) return showErr("autherr","The two passwords don't match.");
+  if(wantsAdmin&&!pin) return showErr("autherr","Enter the admin PIN, or choose Normal user.");
+  $("#autherr").hidden=true; btn.disabled=true; btn.textContent="Creating…";
+  let res;
+  try{ res=await run(sb.auth.signUp({email:email,password:p,options:{data:{name:name}}})); }
+  catch(e){ showErr("autherr",friendly(e)); btn.disabled=false; btn.textContent="Create account"; return; }
+  if(!res||!res.session){
+    state.authTab="login"; state.authRole=wantsAdmin?"admin":"user";
+    state.authNote="Account created. Check your email and open the confirmation link, then log in."+(wantsAdmin?" Choose Admin when you log in to enter the PIN.":"");
+    renderAuth(); return;
+  }
+  let pinOk=true;
+  if(wantsAdmin){ try{ const r=await submitPin(pin); pinOk=!!r.ok; }catch(e){ pinOk=false; } }
+  await enterApp();
+  if(wantsAdmin&&!pinOk) toast("Account created, but the PIN was wrong, so you are a normal user. Log out and log in as Admin to try again.",true);
+}
+async function doForgot(){
+  const email=$("#fg-email").value.trim(), btn=$("#authbtn");
+  if(!validEmail(email)) return showErr("autherr","Enter a valid email address.");
+  $("#autherr").hidden=true; btn.disabled=true; btn.textContent="Sending…";
+  try{
+    await run(sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname}));
+    state.authNote="If that email has an account, a reset link is on its way."; state.authTab="login"; renderAuth();
+  }catch(e){ showErr("autherr",friendly(e)); btn.disabled=false; btn.textContent="Send reset link"; }
+}
+async function doRecovery(){
+  const p=$("#rc-pass").value, p2=$("#rc-pass2").value, btn=$("#authbtn");
+  if(p.length<8) return showErr("autherr","Password must be at least 8 characters.");
+  if(p!==p2) return showErr("autherr","The two passwords don't match.");
+  $("#autherr").hidden=true; btn.disabled=true; btn.textContent="Saving…";
+  try{
+    await run(sb.auth.updateUser({password:p}));
+    state.recovery=false;
+    try{ history.replaceState(null,"",location.pathname); }catch(e){}
+    try{ await sb.rpc("end_admin_session"); }catch(e){}
+    toast("Password updated");
+    await enterApp();
+  }catch(e){ showErr("autherr",friendly(e)); btn.disabled=false; btn.textContent="Save password"; }
+}
+
+async function enterApp(){
+  state.error=""; state.ready=false;
+  await loadProfile();
+  state.auth="in"; state.tab="log"; state.authNote="";
+  renderAll();
+  const cur=todayStr().slice(0,7);
+  try{
+    await Promise.all([loadCore(),loadMonth(cur),loadMonth(shiftMonth(cur,-1))]);
+    state.ready=true;
+  }catch(e){ state.error=friendly(e); }
+  renderAll();
+  subscribeRealtime();
+}
+function resetToLogin(){
+  unsubscribeRealtime();
+  closeDlg();
+  state.user=null; state.profile=null; state.admin=false; state.ready=false; state.error="";
+  state.cows=[]; state.cereals=[]; state.recent=[]; state.milk={}; state.sales=[]; state.loadedMonths=new Set();
+  state.draft={}; state.sdraft={}; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
+  renderAll();
+}
+async function logout(){
+  try{ await sb.rpc("end_admin_session"); }catch(e){}
+  try{ await sb.auth.signOut(); }catch(e){}
+  resetToLogin(); toast("Logged out");
+}
+async function cancelPin(){
+  try{ await sb.auth.signOut(); }catch(e){}
+  resetToLogin();
+}
+
+/* ----- Milk log ----- */
+function renderLog(){
+  const el=$("#view-log");
+  if(!state.ready){ el.innerHTML=""; return; }
+  if(!el.querySelector("#logbody")){
+    el.innerHTML='<div class="logbar"><div><h2>Milk log</h2><p class="sub">Enter the litres each cow gave. Milk is worth KES '+PRICE+' a litre.</p></div>'
+      +'<div class="field"><label for="logdate">Date</label><input type="date" id="logdate" max="'+todayStr()+'"></div></div><div id="logbody"></div>';
+    $("#logdate").value=state.date;
+  }
+  ensureMonth(monthOf(state.date));
+  renderLogBody();
+}
+
+function currentValue(c){
+  const key=state.date+"|"+c.id;
+  if(key in state.draft){
+    const raw=String(state.draft[key]).trim(); if(raw==="") return 0;
+    const n=parseFloat(raw); return isFinite(n)&&n>=0?n:0;
+  }
+  return litresFor(c.id,state.date)||0;
+}
+function pendingChanges(){
+  const out=[];
+  for(const c of loggableCows()){
+    const key=state.date+"|"+c.id;
+    if(!(key in state.draft)) continue;
+    const raw=String(state.draft[key]).trim(), saved=litresFor(c.id,state.date);
+    if(raw===""){ if(saved!==null) out.push({id:c.id,value:null}); continue; }
+    const n=parseFloat(raw); if(!isFinite(n)) continue;
+    if(saved===null||round2(n)!==saved) out.push({id:c.id,value:round2(n)});
+  }
+  return out;
+}
+function validateDraft(){
+  for(const c of loggableCows()){
+    const key=state.date+"|"+c.id;
+    if(!(key in state.draft)) continue;
+    const raw=String(state.draft[key]).trim(); if(raw==="") continue;
+    const n=parseFloat(raw);
+    if(!isFinite(n)||n<0) return "Enter litres as a number, 0 or more, for "+cowLabel(c)+".";
+    if(n>MAX_LITRES) return cowLabel(c)+": "+raw+" litres looks too high. One cow can't give more than "+MAX_LITRES+" litres a day.";
+  }
+  return "";
+}
+
+function rowHTML(c){
+  const saved=litresFor(c.id,state.date), key=state.date+"|"+c.id;
+  const val = key in state.draft ? state.draft[key] : (saved===null?"":String(saved));
+  const n=parseFloat(val), kes=isFinite(n)&&n>0?fmtKES(n*PRICE):"";
+  const meta=[c.name?"Tag "+c.tag:"",c.breed||"",c.status&&c.status!=="milking"?label(STATUSES,c.status):""].filter(Boolean).join(", ");
+  return '<div class="row">'+coat(c.id,44)
+    +'<div><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div></div>'
+    +'<div class="entry"><div class="lit"><input type="number" inputmode="decimal" min="0" max="'+MAX_LITRES+'" step="any" placeholder="0" data-cow="'+esc(c.id)+'" aria-label="Litres from '+esc(cowLabel(c))+'" value="'+esc(val)+'"><span>L</span></div>'
+    +'<div class="kes" data-kes="'+esc(c.id)+'">'+kes+'</div></div></div>';
+}
+
+function renderLogBody(){
+  const body=$("#logbody"); if(!body) return;
+  const active=document.activeElement, keep=(active&&active.dataset&&active.dataset.cow&&body.contains(active))?active.dataset.cow:null;
+  const cows=loggableCows();
+  let html="";
+  if(!cows.length){
+    html+='<div class="ledger"><div class="empty"><p>'+(state.admin?"There are no cows in the herd yet. Add a cow, then come back to record milk.":"There are no cows in the herd yet. An admin needs to add them first.")+'</p>'+(state.admin?'<button class="btn" data-act="goto-herd">Go to herd</button>':"")+'</div></div>';
+  } else {
+    html+='<div class="ledger">'+cows.map(rowHTML).join("")+'</div>';
+    html+='<div class="total"><div><div class="eq">Total for '+esc(fmtDate(state.date,{weekday:"short",day:"numeric",month:"short"}))+'</div><div class="big" id="tot-kes"></div><div class="eq" id="tot-l"></div></div>'
+      +'<button class="btn" id="savemilk" data-act="save-milk">Save milk</button></div>'
+      +'<div class="error" id="logerr" role="alert" hidden></div>';
+  }
+  body.innerHTML=html;
+  updateTotals();
+  if(keep){ const inp=body.querySelector('input[data-cow="'+CSS.escape(keep)+'"]'); if(inp) inp.focus(); }
+}
+
+function updateTotals(){
+  const k=$("#tot-kes"); if(!k) return;
+  let l=0; for(const c of loggableCows()) l+=currentValue(c);
+  k.textContent=fmtKES(l*PRICE);
+  $("#tot-l").textContent=fmtL(l)+" litres at KES "+PRICE+" a litre";
+  const b=$("#savemilk"); if(b){ b.disabled = state.saving || pendingChanges().length===0; b.textContent = state.saving?"Saving…":"Save milk"; }
+}
+
+async function saveMilk(){
+  const errEl=$("#logerr"), err=validateDraft();
+  if(err){ errEl.textContent=err; errEl.hidden=false; return; }
+  errEl.hidden=true;
+  const changes=pendingChanges(); if(!changes.length) return;
+  state.saving=true; updateTotals();
+  const date=state.date;
+  try{
+    const ups=changes.filter(c=>c.value!==null).map(c=>({cow_id:c.id,entry_date:date,litres:c.value}));
+    if(ups.length) await run(sb.from("milk_entries").upsert(ups,{onConflict:"cow_id,entry_date"}));
+    for(const d of changes.filter(c=>c.value===null)) await run(sb.from("milk_entries").delete().eq("cow_id",d.id).eq("entry_date",date));
+    changes.forEach(c=>{
+      if(c.value===null) delete state.milk[c.id+"|"+date]; else state.milk[c.id+"|"+date]=c.value;
+      delete state.draft[date+"|"+c.id];
+    });
+    toast("Milk saved");
+  }catch(e){ toast("Couldn't save the milk. "+friendly(e),true); }
+  state.saving=false;
+  renderLogBody();
+}
+
+/* ----- Herd ----- */
+function cowRowHTML(c){
+  const meta=[c.name?"Tag "+c.tag:"",c.breed||"",ageText(c.dob)].filter(Boolean).join(", ");
+  return '<button class="cow" data-open="'+esc(c.id)+'">'+coat(c.id,44)
+    +'<div><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div></div>'
+    +'<div class="tags">'+statusPill(c)+dueChip(c)+'</div></button>';
+}
+function renderHerd(){
+  const el=$("#view-herd");
+  if(!state.ready){ el.innerHTML=""; return; }
+  const cows=sortedCows(state.cows);
+  let html='<div class="logbar"><div><h2>Herd</h2><p class="sub">'
+    +(state.admin?"You're an admin, so you can add and edit cow records.":"Cow records are read-only. Ask an admin to change them.")
+    +'</p></div>'+(state.admin?'<button class="btn" data-act="add">Add cow</button>':"")+'</div>';
+  if(!cows.length){
+    html+='<div class="ledger"><div class="empty"><p>'+(state.admin?"No cows yet. Add your first cow to start the herd book.":"No cows have been added yet.")+'</p></div></div>';
+  } else {
+    html+='<div class="ledger">'+cows.map(cowRowHTML).join("")+'</div>';
+  }
+  el.innerHTML=html;
+}
+
+/* ----- Cereals ----- */
+function renderCereals(){
+  const el=$("#view-cereals");
+  if(!state.ready){ el.innerHTML=""; return; }
+  if(!el.querySelector("#cerbody")){
+    el.innerHTML='<div class="logbar"><div><h2>Cereals</h2><p class="sub">Enter how many kilograms were sold. The stock left updates by itself.</p></div>'
+      +(state.admin?'<button class="btn" data-act="add-cereal">Add cereal</button>':"")+'</div><div id="cerbody"></div>';
+  }
+  const btn=el.querySelector('.logbar [data-act=add-cereal]');
+  if(state.admin&&!btn) el.querySelector(".logbar").insertAdjacentHTML("beforeend",'<button class="btn" data-act="add-cereal">Add cereal</button>');
+  if(!state.admin&&btn) btn.remove();
+  renderCerealBody();
+}
+
+function cerealRowHTML(c){
+  const rem=c.qty, out=rem<=0, raw=state.sdraft[c.id]||"";
+  const n=parseFloat(raw), kes=isFinite(n)&&n>0?fmtKES(n*c.price):"";
+  return '<div class="row"><div class="chip" aria-hidden="true">'+esc(String(c.name||"?").charAt(0).toUpperCase())+'</div>'
+    +'<div><div class="nm">'+esc(c.name)+'</div><div class="meta">'+esc(fmtKES(c.price)+" a kg, ")+(out?'<span class="pill due">Out of stock</span>':esc(fmtL(rem)+" kg left"))+'</div>'
+    +(state.admin?'<button class="link" data-act="edit-cereal" data-id="'+esc(c.id)+'">Edit '+esc(c.name)+'</button>':"")+'</div>'
+    +'<div class="entry"><div class="lit"><input type="number" inputmode="decimal" min="0" step="any" placeholder="0" data-cereal="'+esc(c.id)+'" aria-label="Kilograms of '+esc(c.name)+' sold" value="'+esc(raw)+'"'+(out?" disabled":"")+'><span>kg</span></div>'
+    +'<div class="kes" data-skes="'+esc(c.id)+'">'+kes+'</div></div></div>';
+}
+
+function pendingSalesTotals(){
+  let kg=0, kes=0;
+  for(const c of state.cereals){
+    const n=parseFloat(state.sdraft[c.id]);
+    if(isFinite(n)&&n>0){ kg+=n; kes+=n*c.price; }
+  }
+  return {kg:kg,kes:kes};
+}
+function updateSalesTotals(){
+  const k=$("#stot-kes"); if(!k) return;
+  const t=pendingSalesTotals();
+  k.textContent=fmtKES(t.kes);
+  $("#stot-kg").textContent=fmtL(t.kg)+" kg to record";
+  const b=$("#recordsales"); if(b){ b.disabled=state.saving||t.kg<=0; b.textContent=state.saving?"Saving…":"Record sales"; }
+}
+
+function renderCerealBody(){
+  const body=$("#cerbody"); if(!body) return;
+  const active=document.activeElement, keep=(active&&active.dataset&&active.dataset.cereal&&body.contains(active))?active.dataset.cereal:null;
+  const cereals=sortedCereals(), today=todayStr();
+  let html="";
+  if(!cereals.length){
+    html+='<div class="ledger"><div class="empty"><p>'+(state.admin?"No cereals yet. Add a cereal with its price per kg and the quantity you have.":"No cereals have been added yet. An admin needs to add them first.")+'</p>'+(state.admin?'<button class="btn" data-act="add-cereal">Add cereal</button>':"")+'</div></div>';
+  } else {
+    let kgT=0, kesT=0;
+    for(const e of state.sales) if(e.d===today && findCereal(e.cerealId)){ kgT+=e.kg; kesT+=e.kg*e.p; }
+    html+='<p class="sumline">Sold today: <b>'+fmtL(kgT)+' kg</b> for <b>'+fmtKES(kesT)+'</b>.</p>';
+    html+='<div class="ledger">'+cereals.map(cerealRowHTML).join("")+'</div>';
+    html+='<div class="total"><div><div class="eq">This sale</div><div class="big" id="stot-kes"></div><div class="eq" id="stot-kg"></div></div>'
+      +'<button class="btn" id="recordsales" data-act="record-sales">Record sales</button></div>'
+      +'<div class="error" id="sellerr" role="alert" hidden></div>';
+    const recent=state.recent.filter(e=>findCereal(e.cerealId));
+    if(recent.length){
+      html+='<h3 class="sec">Recent sales</h3><div class="ledger">'+recent.map(e=>{
+        const c=findCereal(e.cerealId);
+        return '<div class="sale"><div><div class="nm">'+esc(fmtL(e.kg))+' kg of '+esc(c.name)+'</div><div class="meta">'+esc(fmtKES(e.kg*e.p)+" at "+fmtKES(e.p)+" a kg, "+fmtTime(e.ts))+'</div></div>'
+          +(state.admin?'<button class="btn ghost small" data-act="remove-sale" data-id="'+esc(e.id)+'" aria-label="Remove sale of '+esc(fmtL(e.kg))+' kg of '+esc(c.name)+'">Remove</button>':"")+'</div>';
+      }).join("")+'</div>';
+    }
+  }
+  body.innerHTML=html;
+  updateSalesTotals();
+  if(keep){ const inp=body.querySelector('input[data-cereal="'+CSS.escape(keep)+'"]'); if(inp) inp.focus(); }
+}
+
+async function recordSales(){
+  const errEl=$("#sellerr"), rows=[];
+  for(const c of sortedCereals()){
+    const raw=String(state.sdraft[c.id]||"").trim(); if(!raw) continue;
+    const n=parseFloat(raw);
+    if(!isFinite(n)||n<=0){ errEl.textContent=c.name+": enter kilograms as a number above 0."; errEl.hidden=false; return; }
+    if(n>MAX_KG){ errEl.textContent=c.name+": that quantity is too large."; errEl.hidden=false; return; }
+    if(c.qty<=0){ errEl.textContent=c.name+" is out of stock."; errEl.hidden=false; return; }
+    if(n>c.qty+1e-9){ errEl.textContent="Only "+fmtL(c.qty)+" kg of "+c.name+" is left. You entered "+fmtL(n)+" kg."; errEl.hidden=false; return; }
+    rows.push({c:c,kg:round2(n)});
+  }
+  if(!rows.length) return;
+  errEl.hidden=true; state.saving=true; updateSalesTotals();
+  const date=todayStr();
+  let failed=0, lastErr=null;
+  for(const r of rows){
+    try{
+      await run(sb.rpc("record_sale",{p_cereal_id:r.c.id,p_kg:r.kg,p_sold_on:date}));
+      delete state.sdraft[r.c.id];
+    }catch(e){ failed++; lastErr=e; }
+  }
+  state.saving=false;
+  try{ await loadCore(); await loadMonth(monthOf(date)); }catch(e){}
+  if(failed) toast("Couldn't record "+failed+(failed===1?" sale. ":" sales. ")+friendly(lastErr),true); else toast("Sales recorded");
+  renderCerealBody();
+}
+async function removeSale(id){
+  try{ await run(sb.rpc("void_sale",{p_sale_id:id})); toast("Sale removed"); }
+  catch(e){ toast("Couldn't remove the sale. "+friendly(e),true); }
+  try{ await loadCore(); await Promise.all(Array.from(state.loadedMonths).map(loadMonth)); }catch(e){}
+  renderCerealBody();
+}
+
+/* ----- Summary ----- */
+function renderSummary(){
+  const el=$("#view-summary");
+  if(!state.ready){ el.innerHTML=""; return; }
+  const m=state.month, dim=daysInMonth(m), isCurrent=m>=todayStr().slice(0,7);
+  let html='<div class="monthbar"><div class="lbl">'+esc(monthLabel(m))+'</div><div class="monthbtns">'
+    +'<button class="btn ghost" data-act="prev-month">Previous month</button>'
+    +'<button class="btn ghost" data-act="next-month"'+(isCurrent?" disabled":"")+'>Next month</button></div></div>';
+  if(!state.loadedMonths.has(m)){
+    ensureMonth(m);
+    el.innerHTML=html+'<div class="note" style="margin-top:14px">Loading '+esc(monthLabel(m))+'…</div>'; return;
+  }
+  const perDay=new Array(dim).fill(0), perCowMap={}, pre="|"+m;
+  for(const k in state.milk){
+    const i=k.indexOf("|"); if(k.slice(i+1,i+1+7)!==m) continue;
+    const cowId=k.slice(0,i), day=parseInt(k.slice(i+9,i+11),10), v=state.milk[k];
+    if(!(day>=1&&day<=dim)||!findCow(cowId)) continue;
+    perDay[day-1]+=v;
+    const a=perCowMap[cowId]||(perCowMap[cowId]={c:findCow(cowId),l:0,days:0}); a.l+=v; if(v>0) a.days++;
+  }
+  const perCow=Object.keys(perCowMap).map(k=>perCowMap[k]).filter(p=>p.l>0).sort((a,b)=>b.l-a.l);
+  const total=round2(perDay.reduce((a,b)=>a+b,0));
+
+  html+='<h3 class="sec">Milk</h3>';
+  if(total<=0){
+    html+='<div class="ledger"><div class="empty"><p>No milk was recorded in '+esc(monthLabel(m))+'.</p></div></div>';
+  } else {
+    html+='<p class="sumline" style="margin-top:0"><b>'+fmtL(total)+' litres</b> at KES '+PRICE+' a litre is <b>'+fmtKES(total*PRICE)+'</b>.</p>';
+    const items=perDay.map((v,i)=>({v:v,t:fmtDate(m+"-"+pad(i+1),{day:"numeric",month:"short"})+": "+fmtL(v)+" L"}));
+    html+=bars(items,"Litres of milk per day in "+monthLabel(m),"1 "+fmtDate(m+"-01",{month:"short"}),dim+" "+fmtDate(m+"-01",{month:"short"}));
+    html+='<div class="scroll"><table><thead><tr><th>Cow</th><th>Days recorded</th><th>Litres</th><th>Average a day</th><th>Earnings</th></tr></thead><tbody>'
+      +perCow.map(p=>'<tr><td>'+esc(cowLabel(p.c))+'</td><td>'+p.days+'</td><td>'+fmtL(p.l)+'</td><td>'+(p.days?fmtL(p.l/p.days):"")+'</td><td>'+fmtKES(p.l*PRICE)+'</td></tr>').join("")
+      +'</tbody><tfoot><tr><td>Whole herd</td><td></td><td>'+fmtL(total)+'</td><td></td><td>'+fmtKES(total*PRICE)+'</td></tr></tfoot></table></div>';
+  }
+
+  html+='<h3 class="sec">Cereals sold</h3>';
+  const agg={};
+  for(const e of state.sales){
+    if(monthOf(e.d)!==m) continue;
+    const c=findCereal(e.cerealId); if(!c) continue;
+    const a=agg[c.id]||(agg[c.id]={c:c,kg:0,kes:0}); a.kg+=e.kg; a.kes+=e.kg*e.p;
+  }
+  const list=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>b.kes-a.kes);
+  if(!list.length){
+    html+='<div class="ledger"><div class="empty"><p>No cereals were sold in '+esc(monthLabel(m))+'.</p></div></div>';
+  } else {
+    let kgT=0, kesT=0; list.forEach(a=>{ kgT+=a.kg; kesT+=a.kes; });
+    html+='<div class="scroll"><table><thead><tr><th>Cereal</th><th>Kg sold</th><th>Sales value</th><th>Kg left now</th></tr></thead><tbody>'
+      +list.map(a=>'<tr><td>'+esc(a.c.name)+'</td><td>'+fmtL(a.kg)+'</td><td>'+fmtKES(a.kes)+'</td><td>'+fmtL(Math.max(0,a.c.qty))+'</td></tr>').join("")
+      +'</tbody><tfoot><tr><td>All cereals</td><td>'+fmtL(kgT)+'</td><td>'+fmtKES(kesT)+'</td><td></td></tr></tfoot></table></div>';
+  }
+  el.innerHTML=html;
+}
+
+/* ---------- Dialog: cow detail and form, cereal form, deletes ---------- */
+function openDlg(){ const d=$("#dlg"); if(!d.open) d.showModal(); }
+function closeDlg(){ const d=$("#dlg"); if(d.open) d.close(); state.dlg=null; }
+function openDetail(id){ state.dlg={mode:"detail",id:id}; renderDialog(); openDlg(); }
+function openForm(id){ state.dlg={mode:"form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("f-tag"); if(f) f.focus(); }
+function openCerealForm(id){ state.dlg={mode:"cereal-form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("c-name"); if(f) f.focus(); }
+
+function renderDialog(){
+  const d=$("#dlg"), s=state.dlg; if(!s) return;
+  if(s.mode==="form"){ d.innerHTML=formHTML(s.id?findCow(s.id):null); return; }
+  if(s.mode==="cereal-form"){ d.innerHTML=cerealFormHTML(s.id?findCereal(s.id):null); return; }
+  if(s.mode==="cereal-confirm"){ const c=findCereal(s.id); if(!c){ closeDlg(); return; } d.innerHTML=cerealConfirmHTML(c); return; }
+  const c=findCow(s.id);
+  if(!c){ closeDlg(); return; }
+  d.innerHTML = s.mode==="confirm" ? confirmHTML(c) : detailHTML(c);
+}
+
+function detailHTML(c){
+  const none='<span class="none">Not recorded</span>', due=dueInfo(c), age=ageText(c.dob);
+  const val=v=>v?esc(v):none;
+  const facts=[
+    ["Tag number",val(c.tag)],
+    ["Breed",val(c.breed)],
+    ["Date of birth",c.dob?esc(fmtDate(c.dob))+(age?" ("+esc(age)+" old)":""):none],
+    ["Status",val(label(STATUSES,c.status))],
+    ["Last calving",c.lastCalving?esc(fmtDate(c.lastCalving)):none],
+    ["Inseminated",c.insemination?esc(fmtDate(c.insemination)):none],
+    ["Bull or semen used",val(c.bull)],
+    ["Pregnancy check",val(label(PREG,c.pregnancy))],
+    ["Expected calving",due?esc(fmtDate(due.due))+" (about "+GESTATION_DAYS+" days after insemination)":none],
+    ["Weight",c.weight?esc(c.weight)+" kg":none]
+  ];
+  const today=todayStr(); let l14=0; const items=[];
+  for(let i=13;i>=0;i--){ const dt=addDays(today,-i), v=litresFor(c.id,dt)||0; l14+=v; items.push({v:v,t:fmtDate(dt,{day:"numeric",month:"short"})+": "+fmtL(v)+" L"}); }
+  const ent=monthEntries(c.id,today.slice(0,7)); let lm=0; for(const k in ent) lm+=ent[k];
+  return '<div class="dlg"><div class="dhead">'+coat(c.id,64)+'<div><h2>'+esc(cowLabel(c))+'</h2><div class="meta">'+(c.name?"Tag "+esc(c.tag):"")+'</div></div></div>'
+    +'<dl class="facts">'+facts.map(f=>'<dt>'+f[0]+'</dt><dd>'+f[1]+'</dd>').join("")+'</dl>'
+    +(c.health?'<div class="block"><h3>Health and treatment</h3><p>'+esc(c.health)+'</p></div>':"")
+    +(c.notes?'<div class="block"><h3>Other notes</h3><p>'+esc(c.notes)+'</p></div>':"")
+    +'<div class="block"><h3>Milk</h3><p>Last 14 days: '+fmtL(l14)+' litres, '+fmtKES(l14*PRICE)+'. This month: '+fmtL(lm)+' litres, '+fmtKES(lm*PRICE)+'.</p>'
+    +bars(items,"Litres of milk per day for the last 14 days",fmtDate(addDays(today,-13),{day:"numeric",month:"short"}),"Today")+'</div>'
+    +'<div class="actions">'+(state.admin?'<button class="btn danger" data-act="ask-delete">Delete cow</button><button class="btn" data-act="edit">Edit cow</button>':"")
+    +'<button class="btn ghost" data-act="close">Close</button></div></div>';
+}
+
+function confirmHTML(c){
+  return '<div class="dlg"><h2>Delete '+esc(cowLabel(c))+'?</h2><p>This removes the cow and all of her milk records. It can\'t be undone.</p>'
+    +'<div class="error" id="delerr" role="alert" hidden></div>'
+    +'<div class="actions"><button class="btn ghost" data-act="cancel-delete">Keep cow</button><button class="btn danger" id="delbtn" data-act="delete">Delete cow</button></div></div>';
+}
+
+function formHTML(c){
+  const v=c||{status:"milking",pregnancy:"unchecked"};
+  const opt=(list,sel)=>list.map(o=>'<option value="'+o[0]+'"'+(o[0]===sel?" selected":"")+'>'+esc(o[1])+'</option>').join("");
+  const t=todayStr();
+  return '<div class="dlg"><h2 style="margin-bottom:14px">'+(c?"Edit cow":"Add cow")+'</h2><form id="cowform" novalidate><div class="grid2">'
+    +'<div class="field"><label for="f-tag">Tag number</label><input type="text" id="f-tag" maxlength="30" value="'+esc(v.tag)+'" required></div>'
+    +'<div class="field"><label for="f-name">Name <span class="hint">(optional)</span></label><input type="text" id="f-name" maxlength="40" value="'+esc(v.name)+'"></div>'
+    +'<div class="field"><label for="f-breed">Breed</label><input type="text" id="f-breed" list="breeds" maxlength="40" value="'+esc(v.breed)+'"><datalist id="breeds">'+BREEDS.map(b=>'<option value="'+b+'">').join("")+'</datalist></div>'
+    +'<div class="field"><label for="f-dob">Date of birth</label><input type="date" id="f-dob" max="'+t+'" value="'+esc(v.dob)+'"></div>'
+    +'<div class="field"><label for="f-status">Status</label><select id="f-status">'+opt(STATUSES,v.status)+'</select></div>'
+    +'<div class="field"><label for="f-weight">Weight in kg <span class="hint">(optional)</span></label><input type="number" id="f-weight" inputmode="decimal" min="0" step="any" value="'+esc(v.weight)+'"></div>'
+    +'<div class="field"><label for="f-last">Last calving date</label><input type="date" id="f-last" max="'+t+'" value="'+esc(v.lastCalving)+'"></div>'
+    +'<div class="field"><label for="f-insem">Insemination date</label><input type="date" id="f-insem" max="'+t+'" value="'+esc(v.insemination)+'"></div>'
+    +'<div class="field"><label for="f-bull">Bull or semen used</label><input type="text" id="f-bull" maxlength="60" value="'+esc(v.bull)+'"></div>'
+    +'<div class="field"><label for="f-preg">Pregnancy check</label><select id="f-preg">'+opt(PREG,v.pregnancy)+'</select></div>'
+    +'<div class="field full"><label for="f-health">Health and treatment <span class="hint">(vaccinations, illness, vet visits)</span></label><textarea id="f-health" maxlength="1500">'+esc(v.health)+'</textarea></div>'
+    +'<div class="field full"><label for="f-notes">Other notes</label><textarea id="f-notes" maxlength="1500">'+esc(v.notes)+'</textarea></div>'
+    +'</div><div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions"><button type="button" class="btn ghost" data-act="cancel-form">Cancel</button><button type="submit" class="btn" id="cowsave">Save cow</button></div></form></div>';
+}
+
+function cerealFormHTML(c){
+  return '<div class="dlg"><h2 style="margin-bottom:14px">'+(c?"Edit cereal":"Add cereal")+'</h2><form id="cerealform" novalidate><div class="grid2">'
+    +'<div class="field full"><label for="c-name">Cereal name</label><input type="text" id="c-name" maxlength="60" value="'+esc(c&&c.name)+'" placeholder="Maize, beans, rice"></div>'
+    +'<div class="field"><label for="c-price">Price per kg <span class="hint">(KES)</span></label><input type="number" id="c-price" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.price)+'"></div>'
+    +'<div class="field"><label for="c-qty">Quantity remaining <span class="hint">(kg)</span></label><input type="number" id="c-qty" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.qty)+'"></div>'
+    +'</div><p class="sub" style="margin-top:12px">Enter the amount you have now. Sales lower it automatically, so change it only to restock or correct a count. A new price applies to future sales only.</p>'
+    +'<div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions">'+(c?'<button type="button" class="btn danger" data-act="ask-delete-cereal">Delete cereal</button>':"")
+    +'<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="cerealsave">Save cereal</button></div></form></div>';
+}
+function cerealConfirmHTML(c){
+  return '<div class="dlg"><h2>Delete '+esc(c.name)+'?</h2><p>This removes the cereal and its sales records. It can\'t be undone.</p>'
+    +'<div class="error" id="delerr" role="alert" hidden></div>'
+    +'<div class="actions"><button class="btn ghost" data-act="cancel-delete-cereal">Keep cereal</button><button class="btn danger" id="delbtn" data-act="delete-cereal">Delete cereal</button></div></div>';
+}
+
+function readForm(){
+  const g=id=>document.getElementById(id).value.trim();
+  return {tag:g("f-tag"),name:g("f-name"),breed:g("f-breed"),dob:g("f-dob"),status:g("f-status"),weight:g("f-weight"),
+    lastCalving:g("f-last"),insemination:g("f-insem"),bull:g("f-bull"),pregnancy:g("f-preg"),health:g("f-health"),notes:g("f-notes")};
+}
+function validateCow(f,editing){
+  if(!f.tag) return "Enter the cow's tag number.";
+  const dup=state.cows.find(c=>c.id!==(editing&&editing.id)&&String(c.tag).toLowerCase()===f.tag.toLowerCase());
+  if(dup) return "Tag "+f.tag+" is already used by "+(dup.name||"another cow")+".";
+  const t=todayStr();
+  if(f.dob&&f.dob>t) return "Date of birth can't be in the future.";
+  if(f.lastCalving&&f.lastCalving>t) return "Last calving date can't be in the future.";
+  if(f.insemination&&f.insemination>t) return "Insemination date can't be in the future.";
+  if(f.dob&&f.lastCalving&&f.lastCalving<f.dob) return "Last calving date is before the date of birth.";
+  if(f.dob&&f.insemination&&f.insemination<f.dob) return "Insemination date is before the date of birth.";
+  if(f.weight!==""){ const w=parseFloat(f.weight); if(!(w>0&&w<2000)) return "Enter the weight in kilograms, for example 450."; }
+  return "";
+}
+// An update or delete that the database silently refuses returns no rows; treat that as a permission problem
+function needRows(rows){ if(!rows||!rows.length){ const e=new Error("permission denied"); e.code="42501"; throw e; } }
+
+async function saveCow(){
+  const errEl=document.getElementById("formerr"), btn=document.getElementById("cowsave");
+  const editing=state.dlg&&state.dlg.id?findCow(state.dlg.id):null, f=readForm(), err=validateCow(f,editing);
+  if(err){ errEl.textContent=err; errEl.hidden=false; return; }
+  errEl.hidden=true; btn.disabled=true; btn.textContent="Saving…";
+  try{
+    const row=cowToRow(f);
+    if(editing) needRows(await run(sb.from("cows").update(row).eq("id",editing.id).select("id")));
+    else await run(sb.from("cows").insert(row));
+    await loadCore();
+    toast("Cow saved");
+    if(editing) openDetail(editing.id); else closeDlg();
+    scheduleRender();
+  }catch(e){
+    errEl.textContent="Couldn't save the cow. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Save cow";
+  }
+}
+async function deleteCow(){
+  const id=state.dlg&&state.dlg.id, btn=document.getElementById("delbtn"), errEl=document.getElementById("delerr");
+  if(!id) return;
+  btn.disabled=true; btn.textContent="Deleting…"; errEl.hidden=true;
+  try{
+    needRows(await run(sb.from("cows").delete().eq("id",id).select("id")));
+    for(const k of Object.keys(state.milk)) if(k.startsWith(id+"|")) delete state.milk[k];
+    await loadCore();
+    closeDlg(); toast("Cow deleted"); scheduleRender();
+  }catch(e){
+    errEl.textContent="Couldn't delete the cow. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Delete cow";
+  }
+}
+
+async function saveCereal(){
+  const btn=document.getElementById("cerealsave");
+  const g=id=>document.getElementById(id).value.trim();
+  const name=g("c-name"), price=parseFloat(g("c-price")), qty=parseFloat(g("c-qty"));
+  const editing=state.dlg&&state.dlg.id?findCereal(state.dlg.id):null;
+  if(!name) return showErr("formerr","Enter the cereal name.");
+  if(state.cereals.find(c=>c.id!==(editing&&editing.id)&&String(c.name).toLowerCase()===name.toLowerCase())) return showErr("formerr",name+" is already in the list.");
+  if(!(price>0&&price<=MAX_KG)) return showErr("formerr","Enter a price per kg above 0, for example 120.");
+  if(!(qty>=0&&qty<=1e7)) return showErr("formerr","Enter the quantity remaining in kg, 0 or more.");
+  document.getElementById("formerr").hidden=true; btn.disabled=true; btn.textContent="Saving…";
+  const row={name:name,price_per_kg:round2(price),qty_kg:round2(qty)};
+  try{
+    if(editing) needRows(await run(sb.from("cereals").update(row).eq("id",editing.id).select("id")));
+    else await run(sb.from("cereals").insert(row));
+    await loadCore();
+    closeDlg(); toast("Cereal saved"); scheduleRender();
+  }catch(e){
+    showErr("formerr","Couldn't save the cereal. "+friendly(e)); btn.disabled=false; btn.textContent="Save cereal";
+  }
+}
+async function deleteCereal(){
+  const id=state.dlg&&state.dlg.id, btn=document.getElementById("delbtn"), errEl=document.getElementById("delerr");
+  if(!id) return;
+  btn.disabled=true; btn.textContent="Deleting…"; errEl.hidden=true;
+  try{
+    needRows(await run(sb.from("cereals").delete().eq("id",id).select("id")));
+    await loadCore(); await Promise.all(Array.from(state.loadedMonths).map(loadMonth));
+    closeDlg(); toast("Cereal deleted"); scheduleRender();
+  }catch(e){
+    errEl.textContent="Couldn't delete the cereal. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Delete cereal";
+  }
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click",e=>{
+  const tab=e.target.closest("[data-tab]");
+  if(tab){ state.tab=tab.dataset.tab; renderAll(); return; }
+  const at=e.target.closest("[data-authtab]");
+  if(at){ state.authTab=at.dataset.authtab; state.authNote=""; renderAuth(); return; }
+  const open=e.target.closest("[data-open]");
+  if(open){ openDetail(open.dataset.open); return; }
+  const a=e.target.closest("[data-act]"); if(!a) return;
+  switch(a.dataset.act){
+    case "logout": logout(); break;
+    case "cancel-pin": cancelPin(); break;
+    case "retry": state.error=""; if(state.ready){ reloadAll(); } else { enterApp(); } break;
+    case "goto-herd": state.tab="herd"; renderAll(); break;
+    case "save-milk": saveMilk(); break;
+    case "add": openForm(null); break;
+    case "edit": openForm(state.dlg.id); break;
+    case "close": closeDlg(); break;
+    case "cancel-form": if(state.dlg.id) openDetail(state.dlg.id); else closeDlg(); break;
+    case "ask-delete": state.dlg={mode:"confirm",id:state.dlg.id}; renderDialog(); break;
+    case "cancel-delete": openDetail(state.dlg.id); break;
+    case "delete": deleteCow(); break;
+    case "add-cereal": openCerealForm(null); break;
+    case "edit-cereal": openCerealForm(a.dataset.id); break;
+    case "ask-delete-cereal": state.dlg={mode:"cereal-confirm",id:state.dlg.id}; renderDialog(); break;
+    case "cancel-delete-cereal": openCerealForm(state.dlg.id); break;
+    case "delete-cereal": deleteCereal(); break;
+    case "record-sales": recordSales(); break;
+    case "remove-sale": removeSale(a.dataset.id); break;
+    case "prev-month": state.month=shiftMonth(state.month,-1); renderSummary(); break;
+    case "next-month": state.month=shiftMonth(state.month,1); renderSummary(); break;
+  }
+});
+document.addEventListener("input",e=>{
+  const t=e.target; if(!t.closest) return;
+  const inp=t.closest("input[data-cow]");
+  if(inp){
+    state.draft[state.date+"|"+inp.dataset.cow]=inp.value;
+    const n=parseFloat(inp.value), k=document.querySelector('[data-kes="'+CSS.escape(inp.dataset.cow)+'"]');
+    if(k) k.textContent=isFinite(n)&&n>0?fmtKES(n*PRICE):"";
+    const er=$("#logerr"); if(er) er.hidden=true;
+    updateTotals(); return;
+  }
+  const ci=t.closest("input[data-cereal]");
+  if(ci){
+    state.sdraft[ci.dataset.cereal]=ci.value;
+    const c=findCereal(ci.dataset.cereal), n=parseFloat(ci.value), k=document.querySelector('[data-skes="'+CSS.escape(ci.dataset.cereal)+'"]');
+    if(k&&c) k.textContent=isFinite(n)&&n>0?fmtKES(n*c.price):"";
+    const er=$("#sellerr"); if(er) er.hidden=true;
+    updateSalesTotals();
+  }
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.name==="role"){
+    state.authRole=t.value;
+    const pf=$("#pinfield"); if(pf) pf.hidden=t.value!=="admin";
+    const el=$("#view-auth"); if(el) el.dataset.key=state.auth+"|"+state.authTab+"|"+state.authNote+"|"+state.authRole;
+    return;
+  }
+  if(t.id!=="logdate") return;
+  const v=t.value;
+  if(!v){ t.value=state.date; return; }
+  state.date = v>todayStr()?todayStr():v; t.value=state.date;
+  ensureMonth(monthOf(state.date));
+  renderLogBody();
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&e.target.matches&&e.target.matches("input[data-cow], input[data-cereal]")){
+    e.preventDefault();
+    const sel=e.target.hasAttribute("data-cow")?"#logbody input[data-cow]":"#cerbody input[data-cereal]";
+    const all=Array.from(document.querySelectorAll(sel)).filter(x=>!x.disabled), i=all.indexOf(e.target);
+    if(i>=0&&i<all.length-1) all[i+1].focus(); else e.target.blur();
+  }
+});
+document.addEventListener("submit",e=>{
+  const id=e.target.id;
+  if(id==="cowform"){ e.preventDefault(); saveCow(); }
+  else if(id==="cerealform"){ e.preventDefault(); saveCereal(); }
+  else if(id==="loginform"){ e.preventDefault(); doLogin(); }
+  else if(id==="signupform"){ e.preventDefault(); doSignup(); }
+  else if(id==="pinform"){ e.preventDefault(); doPin(); }
+  else if(id==="forgotform"){ e.preventDefault(); doForgot(); }
+  else if(id==="recoveryform"){ e.preventDefault(); doRecovery(); }
+});
+$("#dlg").addEventListener("click",e=>{ if(e.target===$("#dlg")) closeDlg(); });
+$("#dlg").addEventListener("close",()=>{ state.dlg=null; });
+
+/* ---------- Start ---------- */
+async function init(){
+  if(!configured){ state.auth="config"; renderAll(); return; }
+  if(typeof window.supabase==="undefined"||!window.supabase.createClient){
+    state.auth="out"; state.error="Couldn't load the Supabase library. Check your internet connection and reload."; renderAll(); return;
+  }
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  renderAll();
+  // Do not call other Supabase methods directly inside this callback
+  sb.auth.onAuthStateChange((event)=>{
+    if(event==="PASSWORD_RECOVERY"){ state.recovery=true; setTimeout(()=>{ state.auth="recovery"; renderAll(); },0); }
+    else if(event==="SIGNED_OUT"){ setTimeout(()=>{ if(state.auth==="in"||state.auth==="pin") resetToLogin(); },0); }
+  });
+  let session=null;
+  try{ const r=await sb.auth.getSession(); session=r.data&&r.data.session; }catch(e){}
+  if(state.recovery){ state.auth="recovery"; renderAll(); return; }
+  if(session){ await enterApp(); return; }
+  state.auth="out"; state.authTab="login";
+  renderAll();
+}
+init();
+})();
+</script>
+</body>
+</html>
