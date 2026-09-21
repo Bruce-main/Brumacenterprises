@@ -98,6 +98,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .mrow .macts{grid-column:2;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .mname{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .pill.admin{background:var(--green-tint);color:var(--green)}
+.namebtn{background:none;border:0;padding:6px 8px;border-radius:8px;font-weight:600;color:var(--ink);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px}
+.namebtn:hover{background:var(--surface-2)}
+.chip.big{width:64px;height:64px;font-size:28px;flex:none}
 .switchrow{margin-top:20px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
 .switchrow label{display:flex;align-items:flex-start;gap:10px;font-weight:600;cursor:pointer}
 .switchrow input{margin-top:3px;accent-color:var(--green);width:18px;height:18px;flex:none}
@@ -287,7 +290,7 @@ function friendly(e){
   if(c==="42501"||/row-level security|permission denied/i.test(m)) return "You don't have permission for that. If you are an admin, log out and log in as Admin again.";
   if(/Invalid login credentials/i.test(m)) return "Email or password is incorrect.";
   if(/Email not confirmed/i.test(m)) return "Confirm your email first using the link we sent, then log in.";
-  if(/already registered/i.test(m)) return "An account with this email already exists. Log in instead.";
+  if(/already (been )?registered/i.test(m)) return "An account with this email already exists. Log in instead.";
   if(/rate limit|too many/i.test(m)) return "Too many tries. Wait a minute and try again.";
   if(/Failed to fetch|NetworkError|network/i.test(m)) return "Can't reach the server. Check your internet connection.";
   return m||"Something went wrong. Try again.";
@@ -375,7 +378,7 @@ async function loadProfile(){
   state.user=s.data&&s.data.session?s.data.session.user:null;
   if(!state.user){ state.profile=null; state.admin=false; return; }
   let p=null;
-  try{ p=await run(sb.from("profiles").select("name,email,role,admin_until").eq("id",state.user.id).maybeSingle()); }catch(e){}
+  try{ p=await run(sb.from("profiles").select("name,email,role,admin_until,phone,job_title,area,created_at").eq("id",state.user.id).maybeSingle()); }catch(e){}
   state.profile=p;
   state.admin=!!(p&&p.role==="admin"&&p.admin_until&&Date.parse(p.admin_until)>Date.now());
 }
@@ -440,7 +443,7 @@ function scheduleRender(){ if(rafId) return; rafId=requestAnimationFrame(()=>{ r
 
 function renderWho(){
   $("#who").innerHTML = state.auth==="in"
-    ? '<span class="role">'+(state.admin?"Admin":"Member")+'</span><span class="uname">'+esc((state.profile&&state.profile.name)||(state.user&&state.user.email)||"")+'</span><button class="btn ghost small" data-act="logout">Log out</button>'
+    ? '<span class="role">'+(state.admin?"Admin":"Member")+'</span><button class="namebtn" data-act="open-profile" title="View and edit your profile">'+esc((state.profile&&state.profile.name)||(state.user&&state.user.email)||"")+'</button><button class="btn ghost small" data-act="logout">Log out</button>'
     : "";
 }
 
@@ -463,7 +466,7 @@ function renderAll(){
   else if(state.tab==="cereals") renderCereals();
   else if(state.tab==="members") renderMembers();
   else renderSummary();
-  if(state.dlg && state.dlg.mode==="detail") renderDialog();
+  if(state.dlg && ["detail","profile","member-card"].indexOf(state.dlg.mode)>=0) renderDialog();
 }
 
 function renderBanner(){
@@ -896,17 +899,14 @@ async function loadMembers(){
   }
   scheduleRender();
 }
+function initial(name){ return esc(String(name||"?").trim().charAt(0).toUpperCase()||"?"); }
 function memberRowHTML(m){
   const isAdmin=m.role==="admin", name=m.name||m.email||"Unnamed";
   const joined=m.created_at?fmtDate(fmtISO(new Date(m.created_at))):"";
-  const acts = m.is_me
-    ? '<span class="meta">This is you. You can\'t change your own role or remove yourself.</span>'
-    : '<button class="btn ghost small" data-act="set-role" data-id="'+esc(m.id)+'" data-role="'+(isAdmin?"user":"admin")+'">'+(isAdmin?"Make normal user":"Make admin")+'</button>'
-      +'<button class="btn danger small" data-act="ask-remove-member" data-id="'+esc(m.id)+'">Remove</button>';
-  return '<div class="mrow"><div class="chip" aria-hidden="true">'+esc(String(name).charAt(0).toUpperCase())+'</div>'
-    +'<div><div class="mname"><span class="nm">'+esc(name)+(m.is_me?" (you)":"")+'</span><span class="pill '+(isAdmin?"admin":"")+'">'+(isAdmin?"Admin":"Normal user")+'</span></div>'
+  return '<button class="cow" data-act="open-member" data-id="'+esc(m.id)+'"><div class="chip" aria-hidden="true">'+initial(name)+'</div>'
+    +'<div><div class="nm">'+esc(name)+(m.is_me?" (you)":"")+'</div>'
     +'<div class="meta">'+esc((m.email||"")+(joined?(m.email?", ":"")+"joined "+joined:""))+'</div></div>'
-    +'<div class="macts">'+acts+'</div></div>';
+    +'<div class="tags"><span class="pill '+(isAdmin?"admin":"")+'">'+(isAdmin?"Admin":"Normal user")+'</span></div></button>';
 }
 function renderMembers(){
   const el=$("#view-members");
@@ -917,7 +917,7 @@ function renderMembers(){
     el.innerHTML='<div class="error" role="alert">Couldn\'t load the members. '+esc(M.error)+' <button class="link" data-act="reload-members">Try again</button></div>'; return;
   }
   const total=M.list.length, admins=M.list.filter(m=>m.role==="admin").length, users=total-admins;
-  el.innerHTML='<div class="logbar"><div><h2>Members</h2><p class="sub">Everyone who has registered. You decide who is an admin.</p></div></div>'
+  el.innerHTML='<div class="logbar"><div><h2>Members</h2><p class="sub">Everyone who has registered. Click a member to open their card and manage their role.</p></div></div>'
     +'<p class="sumline"><b>'+total+' registered '+(total===1?"member":"members")+'</b>: '+admins+(admins===1?" admin":" admins")+' and '+users+(users===1?" normal user":" normal users")+'.</p>'
     +'<div class="ledger">'+M.list.map(memberRowHTML).join("")+'</div>'
     +'<div class="switchrow"><label><input type="checkbox" id="admsignup"'+(M.allowAdminSignup?" checked":"")+'> Let new sign-ups become admins with the PIN</label>'
@@ -1006,6 +1006,11 @@ function renderDialog(){
   const d=$("#dlg"), s=state.dlg; if(!s) return;
   if(s.mode==="form"){ d.innerHTML=formHTML(s.id?findCow(s.id):null); return; }
   if(s.mode==="cereal-form"){ d.innerHTML=cerealFormHTML(s.id?findCereal(s.id):null); return; }
+  if(s.mode==="profile"){ d.innerHTML=ownCardHTML(s.note); return; }
+  if(s.mode==="profile-edit"){ d.innerHTML=profileFormHTML(); return; }
+  if(s.mode==="profile-email"){ d.innerHTML=emailFormHTML(); return; }
+  if(s.mode==="profile-password"){ d.innerHTML=passwordFormHTML(); return; }
+  if(s.mode==="member-card"){ const m=state.members.list.find(x=>x.id===s.id); if(!m){ closeDlg(); return; } d.innerHTML=memberCardHTML(m); return; }
   if(s.mode==="member-confirm"){ const m=state.members.list.find(x=>x.id===s.id); if(!m){ closeDlg(); return; } d.innerHTML=memberConfirmHTML(m); return; }
   if(s.mode==="cereal-confirm"){ const c=findCereal(s.id); if(!c){ closeDlg(); return; } d.innerHTML=cerealConfirmHTML(c); return; }
   const c=findCow(s.id);
@@ -1078,10 +1083,118 @@ function cerealFormHTML(c){
     +'<div class="actions">'+(c?'<button type="button" class="btn danger" data-act="ask-delete-cereal">Delete cereal</button>':"")
     +'<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="cerealsave">Save cereal</button></div></form></div>';
 }
+/* ----- Profile cards and edit forms ----- */
+const PHONE_RE=/^[0-9+() -]{7,20}$/;
+function cardHTML(p,actions,note){
+  const isAdmin=p.role==="admin", name=p.name||p.email||"Unnamed";
+  const none='<span class="none">Not added</span>', val=v=>v?esc(v):none;
+  const joined=p.created_at?esc(fmtDate(fmtISO(new Date(p.created_at)))):none;
+  return '<div class="dlg">'+(note?'<div class="note" role="status">'+esc(note)+'</div>':"")
+    +'<div class="dhead"><div class="chip big" aria-hidden="true">'+initial(name)+'</div><div><h2>'+esc(name)+'</h2><span class="pill '+(isAdmin?"admin":"")+'">'+(isAdmin?"Admin":"Normal user")+'</span></div></div>'
+    +'<dl class="facts"><dt>Email</dt><dd>'+val(p.email)+'</dd><dt>Phone</dt><dd>'+val(p.phone)+'</dd><dt>Job on the farm</dt><dd>'+val(p.job_title)+'</dd><dt>Town or area</dt><dd>'+val(p.area)+'</dd><dt>Member since</dt><dd>'+joined+'</dd></dl>'
+    +'<div class="actions">'+actions+'</div></div>';
+}
+function me(){
+  const pr=state.profile||{};
+  return {name:pr.name,email:(state.user&&state.user.email)||pr.email,role:pr.role||"user",phone:pr.phone,job_title:pr.job_title,area:pr.area,created_at:pr.created_at};
+}
+function ownCardHTML(note){
+  return cardHTML(me(),'<button class="btn ghost" data-act="change-password">Change password</button><button class="btn ghost" data-act="change-email">Change email</button><button class="btn" data-act="edit-profile">Edit details</button><button class="btn ghost" data-act="close">Close</button>',note);
+}
+function memberCardHTML(m){
+  const isAdmin=m.role==="admin";
+  return cardHTML(m,'<button class="btn danger" data-act="ask-remove-member" data-id="'+esc(m.id)+'">Remove member</button>'
+    +'<button class="btn" data-act="set-role" data-id="'+esc(m.id)+'" data-role="'+(isAdmin?"user":"admin")+'">'+(isAdmin?"Make normal user":"Make admin")+'</button>'
+    +'<button class="btn ghost" data-act="close">Close</button>');
+}
+function openProfile(){ state.dlg={mode:"profile"}; renderDialog(); openDlg(); }
+function openProfileForm(mode,focusId){ state.dlg={mode:mode}; renderDialog(); openDlg(); const f=document.getElementById(focusId); if(f) f.focus(); }
+function openMember(id){
+  const m=state.members.list.find(x=>x.id===id); if(!m) return;
+  if(m.is_me){ openProfile(); return; }
+  state.dlg={mode:"member-card",id:id}; renderDialog(); openDlg();
+}
+function profileFormHTML(){
+  const p=me();
+  return '<div class="dlg"><h2 style="margin-bottom:14px">Edit your details</h2><form id="profileform" novalidate><div class="grid2">'
+    +'<div class="field full"><label for="p-name">Name <span class="hint">(shown next to your account)</span></label><input type="text" id="p-name" maxlength="60" autocomplete="name" value="'+esc(p.name)+'"></div>'
+    +'<div class="field"><label for="p-phone">Phone number <span class="hint">(optional)</span></label><input type="text" id="p-phone" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="+254 712 345 678" value="'+esc(p.phone)+'"></div>'
+    +'<div class="field"><label for="p-job">Job on the farm <span class="hint">(optional)</span></label><input type="text" id="p-job" maxlength="40" placeholder="Milker, manager, driver" value="'+esc(p.job_title)+'"></div>'
+    +'<div class="field full"><label for="p-area">Town or area <span class="hint">(optional)</span></label><input type="text" id="p-area" maxlength="60" value="'+esc(p.area)+'"></div>'
+    +'</div><div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions"><button type="button" class="btn ghost" data-act="open-profile">Cancel</button><button type="submit" class="btn" id="formsave">Save details</button></div></form></div>';
+}
+function emailFormHTML(){
+  return '<div class="dlg"><h2 style="margin-bottom:6px">Change your email</h2><p class="sub" style="margin-bottom:14px">Your email is now '+esc(me().email||"")+'. We will send a confirmation link to the new address.</p><form id="emailform" novalidate><div class="stack">'
+    +'<div class="field"><label for="e-email">New email</label><input type="email" id="e-email" autocomplete="email"></div>'
+    +'<div class="field"><label for="e-pass">Your current password</label><input type="password" id="e-pass" autocomplete="current-password"></div></div>'
+    +'<div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions"><button type="button" class="btn ghost" data-act="open-profile">Cancel</button><button type="submit" class="btn" id="formsave">Change email</button></div></form></div>';
+}
+function passwordFormHTML(){
+  return '<div class="dlg"><h2 style="margin-bottom:14px">Change your password</h2><form id="passwordform" novalidate><div class="stack">'
+    +'<div class="field"><label for="w-cur">Current password</label><input type="password" id="w-cur" autocomplete="current-password"></div>'
+    +'<div class="field"><label for="w-new">New password <span class="hint">(at least 8 characters)</span></label><input type="password" id="w-new" autocomplete="new-password"></div>'
+    +'<div class="field"><label for="w-new2">Confirm new password</label><input type="password" id="w-new2" autocomplete="new-password"></div></div>'
+    +'<div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions"><button type="button" class="btn ghost" data-act="open-profile">Cancel</button><button type="submit" class="btn" id="formsave">Change password</button></div></form></div>';
+}
+async function verifyPassword(pw){
+  const r=await sb.auth.signInWithPassword({email:state.user.email,password:pw});
+  if(r.error){ if(/Invalid login credentials/i.test(r.error.message||"")) return false; throw r.error; }
+  return true;
+}
+function formBusy(on,label){ const b=document.getElementById("formsave"); if(b){ b.disabled=on; b.textContent=label; } }
+async function saveProfile(){
+  const g=id=>document.getElementById(id).value.trim();
+  const name=g("p-name"), phone=g("p-phone"), job=g("p-job"), area=g("p-area");
+  if(name.length<2||name.length>60) return showErr("formerr","Enter a name of 2 to 60 characters.");
+  if(phone&&!PHONE_RE.test(phone)) return showErr("formerr","Enter a valid phone number, for example +254 712 345 678.");
+  if(job.length>40) return showErr("formerr","Job title is too long.");
+  if(area.length>60) return showErr("formerr","Town or area is too long.");
+  document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
+  try{
+    await run(sb.rpc("update_my_profile",{p_name:name,p_phone:phone,p_job_title:job,p_area:area}));
+    await loadProfile();
+    toast("Details saved"); openProfile(); scheduleRender();
+    if(state.admin&&state.tab==="members") loadMembers();
+  }catch(e){ showErr("formerr","Couldn't save your details. "+friendly(e)); formBusy(false,"Save details"); }
+}
+async function changeEmail(){
+  const email=document.getElementById("e-email").value.trim(), pw=document.getElementById("e-pass").value;
+  if(!validEmail(email)) return showErr("formerr","Enter a valid email address.");
+  if(email.toLowerCase()===String((state.user&&state.user.email)||"").toLowerCase()) return showErr("formerr","That is already your email.");
+  if(!pw) return showErr("formerr","Enter your current password.");
+  document.getElementById("formerr").hidden=true; formBusy(true,"Checking…");
+  try{
+    if(!(await verifyPassword(pw))){ showErr("formerr","Your current password is incorrect."); formBusy(false,"Change email"); return; }
+    const res=await run(sb.auth.updateUser({email:email}));
+    if(res&&res.user&&res.user.new_email){
+      state.dlg={mode:"profile",note:"We sent a confirmation link to "+email+". Your email changes after you open it."}; renderDialog();
+    } else {
+      state.user.email=email; if(state.profile) state.profile.email=email;
+      toast("Email updated"); openProfile(); scheduleRender();
+    }
+  }catch(e){ showErr("formerr","Couldn't change the email. "+friendly(e)); formBusy(false,"Change email"); }
+}
+async function changePassword(){
+  const cur=document.getElementById("w-cur").value, n1=document.getElementById("w-new").value, n2=document.getElementById("w-new2").value;
+  if(!cur) return showErr("formerr","Enter your current password.");
+  if(n1.length<8) return showErr("formerr","The new password must be at least 8 characters.");
+  if(n1!==n2) return showErr("formerr","The two new passwords don't match.");
+  if(n1===cur) return showErr("formerr","Choose a password different from the current one.");
+  document.getElementById("formerr").hidden=true; formBusy(true,"Checking…");
+  try{
+    if(!(await verifyPassword(cur))){ showErr("formerr","Your current password is incorrect."); formBusy(false,"Change password"); return; }
+    await run(sb.auth.updateUser({password:n1}));
+    toast("Password updated"); openProfile();
+  }catch(e){ showErr("formerr","Couldn't change the password. "+friendly(e)); formBusy(false,"Change password"); }
+}
+
 function memberConfirmHTML(m){
   return '<div class="dlg"><h2>Remove '+esc(m.name||m.email)+'?</h2><p>Their account is deleted and they can no longer log in. Milk and cereal records they entered stay. It can\'t be undone.</p>'
     +'<div class="error" id="delerr" role="alert" hidden></div>'
-    +'<div class="actions"><button class="btn ghost" data-act="close">Keep member</button><button class="btn danger" id="delbtn" data-act="remove-member">Remove member</button></div></div>';
+    +'<div class="actions"><button class="btn ghost" data-act="cancel-member-remove">Keep member</button><button class="btn danger" id="delbtn" data-act="remove-member">Remove member</button></div></div>';
 }
 function cerealConfirmHTML(c){
   return '<div class="dlg"><h2>Delete '+esc(c.name)+'?</h2><p>This removes the cereal and its sales records. It can\'t be undone.</p>'
@@ -1186,6 +1299,12 @@ document.addEventListener("click",e=>{
   switch(a.dataset.act){
     case "logout": logout(); break;
     case "cancel-pin": cancelPin(); break;
+    case "open-profile": openProfile(); break;
+    case "edit-profile": openProfileForm("profile-edit","p-name"); break;
+    case "change-email": openProfileForm("profile-email","e-email"); break;
+    case "change-password": openProfileForm("profile-password","w-cur"); break;
+    case "open-member": openMember(a.dataset.id); break;
+    case "cancel-member-remove": openMember(state.dlg.id); break;
     case "pin-normal": continueAsNormal(); break;
     case "set-role": setRole(a.dataset.id,a.dataset.role); break;
     case "ask-remove-member": state.dlg={mode:"member-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
@@ -1259,6 +1378,9 @@ document.addEventListener("submit",e=>{
   const id=e.target.id;
   if(id==="cowform"){ e.preventDefault(); saveCow(); }
   else if(id==="cerealform"){ e.preventDefault(); saveCereal(); }
+  else if(id==="profileform"){ e.preventDefault(); saveProfile(); }
+  else if(id==="emailform"){ e.preventDefault(); changeEmail(); }
+  else if(id==="passwordform"){ e.preventDefault(); changePassword(); }
   else if(id==="loginform"){ e.preventDefault(); doLogin(); }
   else if(id==="signupform"){ e.preventDefault(); doSignup(); }
   else if(id==="pinform"){ e.preventDefault(); doPin(); }
