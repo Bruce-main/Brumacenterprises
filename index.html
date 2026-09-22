@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Brumac Dairy And Cereals Enterprises</title>
+<title>Brumac Enterprises</title>
 <meta name="description" content="Herd records, daily milk log and cereal sales for the farm.">
-<link rel="icon" href="bmr.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%84%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
@@ -101,6 +101,22 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .namebtn{background:none;border:0;padding:6px 8px;border-radius:8px;font-weight:600;color:var(--ink);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px}
 .namebtn:hover{background:var(--surface-2)}
 .chip.big{width:64px;height:64px;font-size:28px;flex:none}
+.grid3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+@media (max-width:560px){.grid3{grid-template-columns:1fr 1fr}.grid3 .field:first-child{grid-column:1/-1}}
+.salecard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:18px}
+.saleinfo{margin:12px 0;color:var(--ink-soft);font-size:15px;min-height:1.5em}
+.saleinfo b{color:var(--ink)}
+.saleamt{display:flex;align-items:center;gap:10px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bal{font:400 24px/1.1 var(--serif);font-variant-numeric:tabular-nums;text-align:right}
+.bal small{font:600 14px var(--sans);color:var(--ink-soft)}
+.pactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.permlist{display:grid;gap:8px;margin:6px 0 0}
+.perm{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--edge);border-radius:8px;cursor:pointer;background:var(--surface)}
+.perm input{margin-top:3px;accent-color:var(--green);width:18px;height:18px;flex:none}
+.perm b{display:block;font-weight:600}
+.perm span{color:var(--ink-soft);font-size:14px}
+.rolerow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+.rolerow:first-child{border-top:0}
 .switchrow{margin-top:20px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
 .switchrow label{display:flex;align-items:flex-start;gap:10px;font-weight:600;cursor:pointer}
 .switchrow input{margin-top:3px;accent-color:var(--green);width:18px;height:18px;flex:none}
@@ -171,13 +187,14 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
 <div class="wrap">
   <header class="top">
     <div class="top-row">
-      <h1 class="brand" id="farmname">Brumac Dairy And Cereals</h1>
+      <h1 class="brand" id="farmname">Brumac Enterprises</h1>
       <div class="who" id="who"></div>
     </div>
     <div class="tabs" role="tablist" aria-label="Sections" hidden>
       <button class="tab" role="tab" id="tab-log" aria-controls="view-log" aria-selected="true" data-tab="log">Milk log</button>
       <button class="tab" role="tab" id="tab-herd" aria-controls="view-herd" aria-selected="false" data-tab="herd">Herd</button>
-      <button class="tab" role="tab" id="tab-cereals" aria-controls="view-cereals" aria-selected="false" data-tab="cereals">Cereals</button>
+      <button class="tab" role="tab" id="tab-daily" aria-controls="view-daily" aria-selected="false" data-tab="daily">Daily summary</button>
+      <button class="tab" role="tab" id="tab-balances" aria-controls="view-balances" aria-selected="false" data-tab="balances">Balances</button>
       <button class="tab" role="tab" id="tab-summary" aria-controls="view-summary" aria-selected="false" data-tab="summary">Summary</button>
       <button class="tab" role="tab" id="tab-members" aria-controls="view-members" aria-selected="false" data-tab="members" hidden>Members</button>
     </div>
@@ -187,7 +204,8 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
     <section id="view-auth" hidden></section>
     <section id="view-log" role="tabpanel" aria-labelledby="tab-log" hidden></section>
     <section id="view-herd" role="tabpanel" aria-labelledby="tab-herd" hidden></section>
-    <section id="view-cereals" role="tabpanel" aria-labelledby="tab-cereals" hidden></section>
+    <section id="view-daily" role="tabpanel" aria-labelledby="tab-daily" hidden></section>
+    <section id="view-balances" role="tabpanel" aria-labelledby="tab-balances" hidden></section>
     <section id="view-summary" role="tabpanel" aria-labelledby="tab-summary" hidden></section>
     <section id="view-members" role="tabpanel" aria-labelledby="tab-members" hidden></section>
   </main>
@@ -203,17 +221,22 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
 /* =====================================================================
    1. Paste your two Supabase values here (see README.md, step 4)
    ===================================================================== */
-const SUPABASE_URL = "https://cimzgmhemqkdqqlbxakx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";
+const SUPABASE_URL = "PASTE_YOUR_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
 
 /* ---------- Settings ---------- */
-const PRICE = 70;            // Kenyan shillings per litre of milk
+// The milk price is stored in the database and admins change it in the app
 const GESTATION_DAYS = 283;  // used for the expected calving date
 const MAX_LITRES = 100;      // sanity limit for one cow in one day
 const MAX_KG = 100000;       // sanity limit for one cereal sale
 
 const STATUSES = [["milking","Milking"],["dry","Dry"],["heifer","Heifer"],["sold","Sold"],["deceased","Deceased"]];
 const PREG = [["unchecked","Not yet checked"],["pregnant","Confirmed pregnant"],["open","Not pregnant"]];
+const PERMS = [
+  ["edit_herd","Edit the herd","Add, edit and delete cows."],
+  ["manage_stock","Manage stock","Add and set stock quantities, and add, edit or delete cereals."],
+  ["remove_sales","Remove sales","Remove a wrong sale. The quantity goes back into stock."]
+];
 const BREEDS = ["Friesian","Ayrshire","Guernsey","Jersey","Sahiwal","Crossbreed"];
 
 /* ---------- State ---------- */
@@ -226,10 +249,12 @@ const state = {
   authRole:"user",     // user | admin  (choice on the login and signup forms)
   authNote:"",
   ready:false,
-  cows:[], cereals:[], recent:[], milk:{}, sales:[], loadedMonths:new Set(),
+  cows:[], cereals:[], roles:[], milk:{}, milkPrices:{}, sales:[], loadedMonths:new Set(),
+  settings:{milkPrice:70,milkStock:0},
+  salesDate:todayStr(), sale:{product:"milk",qty:"",time:""},
   members:{list:[],allowAdminSignup:true,loaded:false,loading:false,error:""},
   tab:"log", date:todayStr(), month:todayStr().slice(0,7),
-  draft:{}, sdraft:{}, saving:false, dlg:null
+  draft:{}, saving:false, dlg:null
 };
 
 /* ---------- Helpers ---------- */
@@ -308,9 +333,20 @@ function cowToRow(f){
     weight_kg:f.weight!==""?parseFloat(f.weight):null,health:f.health||null,notes:f.notes||null};
 }
 function cerealFromRow(r){ return {id:r.id,name:r.name,price:Number(r.price_per_kg),qty:Number(r.qty_kg)}; }
-function saleFromRow(r){ return {id:r.id,cerealId:r.cereal_id,kg:Number(r.kg),p:Number(r.price_per_kg),d:r.sold_on,ts:Date.parse(r.created_at)||0}; }
+function saleFromRow(r){ return {id:r.id,kind:r.product_kind,cerealId:r.cereal_id,qty:Number(r.quantity),p:Number(r.price_per_unit),d:r.sold_on,ts:Date.parse(r.sold_at)||0}; }
+function fmtClock(ts){ const d=new Date(ts); return pad(d.getHours())+":"+pad(d.getMinutes()); }
 
 /* ---------- Milk and cereal lookups ---------- */
+function milkPrice(){ return state.settings.milkPrice; }
+function priceFor(cowId,date){ const v=state.milkPrices[cowId+"|"+date]; return typeof v==="number"?v:milkPrice(); }
+// What this member is allowed to do: admins (with the PIN confirmed) can do everything;
+// otherwise the permissions of their extra role apply.
+function can(perm){
+  if(state.admin) return true;
+  const r=state.profile&&state.profile.roles;
+  return !!(r&&Array.isArray(r.permissions)&&r.permissions.indexOf(perm)>=0);
+}
+function roleName(){ const r=state.profile&&state.profile.roles; return r&&r.name?r.name:""; }
 function litresFor(cowId,date){ const v=state.milk[cowId+"|"+date]; return typeof v==="number"?v:null; }
 function monthEntries(cowId,month){
   const out={}, pre=cowId+"|"+month;
@@ -378,7 +414,7 @@ async function loadProfile(){
   state.user=s.data&&s.data.session?s.data.session.user:null;
   if(!state.user){ state.profile=null; state.admin=false; return; }
   let p=null;
-  try{ p=await run(sb.from("profiles").select("name,email,role,admin_until,phone,job_title,area,created_at").eq("id",state.user.id).maybeSingle()); }catch(e){}
+  try{ p=await run(sb.from("profiles").select("name,email,role,admin_until,phone,job_title,area,created_at,role_id,roles(name,permissions)").eq("id",state.user.id).maybeSingle()); }catch(e){}
   state.profile=p;
   state.admin=!!(p&&p.role==="admin"&&p.admin_until&&Date.parse(p.admin_until)>Date.now());
 }
@@ -386,22 +422,24 @@ async function loadCore(){
   const res=await Promise.all([
     run(sb.from("cows").select("*").order("tag")),
     run(sb.from("cereals").select("*").order("name")),
-    run(sb.from("cereal_sales").select("*").order("created_at",{ascending:false}).limit(12))
+    run(sb.from("farm_settings").select("*").eq("id",1).maybeSingle()),
+    run(sb.from("roles").select("*").order("name"))
   ]);
   state.cows=res[0].map(cowFromRow);
   state.cereals=res[1].map(cerealFromRow);
-  state.recent=res[2].map(saleFromRow);
+  if(res[2]) state.settings={milkPrice:Number(res[2].milk_price_per_litre),milkStock:Number(res[2].milk_stock_litres)};
+  state.roles=res[3]||[];
   await loadProfile();
 }
 async function loadMonth(m){
   const start=m+"-01", end=m+"-"+pad(daysInMonth(m));
   const res=await Promise.all([
-    fetchAll((a,b)=>sb.from("milk_entries").select("cow_id,entry_date,litres").gte("entry_date",start).lte("entry_date",end).order("entry_date").order("cow_id").range(a,b)),
-    fetchAll((a,b)=>sb.from("cereal_sales").select("*").gte("sold_on",start).lte("sold_on",end).order("created_at").order("id").range(a,b))
+    fetchAll((a,b)=>sb.from("milk_entries").select("cow_id,entry_date,litres,price_per_litre").gte("entry_date",start).lte("entry_date",end).order("entry_date").order("cow_id").range(a,b)),
+    fetchAll((a,b)=>sb.from("sales").select("*").gte("sold_on",start).lte("sold_on",end).order("sold_at").order("id").range(a,b))
   ]);
-  for(const k of Object.keys(state.milk)) if(k.split("|")[1].slice(0,7)===m) delete state.milk[k];
-  res[0].forEach(r=>{ state.milk[r.cow_id+"|"+r.entry_date]=Number(r.litres); });
-  state.sales=state.sales.filter(s=>monthOf(s.d)!==m).concat(res[1].map(saleFromRow));
+  for(const k of Object.keys(state.milk)) if(k.split("|")[1].slice(0,7)===m){ delete state.milk[k]; delete state.milkPrices[k]; }
+  res[0].forEach(r=>{ const k=r.cow_id+"|"+r.entry_date; state.milk[k]=Number(r.litres); if(r.price_per_litre!=null) state.milkPrices[k]=Number(r.price_per_litre); });
+  state.sales=state.sales.filter(x=>monthOf(x.d)!==m).concat(res[1].map(saleFromRow));
   state.loadedMonths.add(m);
 }
 const loadingMonths=new Set();
@@ -443,11 +481,11 @@ function scheduleRender(){ if(rafId) return; rafId=requestAnimationFrame(()=>{ r
 
 function renderWho(){
   $("#who").innerHTML = state.auth==="in"
-    ? '<span class="role">'+(state.admin?"Admin":"Member")+'</span><button class="namebtn" data-act="open-profile" title="View and edit your profile">'+esc((state.profile&&state.profile.name)||(state.user&&state.user.email)||"")+'</button><button class="btn ghost small" data-act="logout">Log out</button>'
+    ? '<span class="role">'+(state.admin?"Admin":(roleName()||"Member"))+'</span><button class="namebtn" data-act="open-profile" title="View and edit your profile">'+esc((state.profile&&state.profile.name)||(state.user&&state.user.email)||"")+'</button><button class="btn ghost small" data-act="logout">Log out</button>'
     : "";
 }
 
-const VIEWS=["log","herd","cereals","summary","members"];
+const VIEWS=["log","herd","daily","balances","summary","members"];
 function renderAll(){
   renderWho(); renderBanner();
   const inApp=state.auth==="in";
@@ -463,7 +501,8 @@ function renderAll(){
   VIEWS.forEach(t=>{ $("#view-"+t).hidden = state.tab!==t; });
   if(state.tab==="log") renderLog();
   else if(state.tab==="herd") renderHerd();
-  else if(state.tab==="cereals") renderCereals();
+  else if(state.tab==="daily") renderDaily();
+  else if(state.tab==="balances") renderBalances();
   else if(state.tab==="members") renderMembers();
   else renderSummary();
   if(state.dlg && ["detail","profile","member-card"].indexOf(state.dlg.mode)>=0) renderDialog();
@@ -644,10 +683,12 @@ async function enterApp(){
 function resetToLogin(){
   unsubscribeRealtime();
   closeDlg();
+  VIEWS.forEach(t=>{ const v=$("#view-"+t); if(v) v.innerHTML=""; });
   state.user=null; state.profile=null; state.admin=false; state.ready=false; state.error="";
-  state.cows=[]; state.cereals=[]; state.recent=[]; state.milk={}; state.sales=[]; state.loadedMonths=new Set();
+  state.cows=[]; state.cereals=[]; state.roles=[]; state.milk={}; state.milkPrices={}; state.sales=[]; state.loadedMonths=new Set();
+  state.settings={milkPrice:70,milkStock:0}; state.salesDate=todayStr(); state.sale={product:"milk",qty:"",time:""};
   state.members={list:[],allowAdminSignup:true,loaded:false,loading:false,error:""};
-  state.draft={}; state.sdraft={}; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
+  state.draft={}; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
   renderAll();
 }
 async function logout(){
@@ -665,10 +706,12 @@ function renderLog(){
   const el=$("#view-log");
   if(!state.ready){ el.innerHTML=""; return; }
   if(!el.querySelector("#logbody")){
-    el.innerHTML='<div class="logbar"><div><h2>Milk log</h2><p class="sub">Enter the litres each cow gave. Milk is worth KES '+PRICE+' a litre.</p></div>'
+    el.innerHTML='<div class="logbar"><div><h2>Milk log</h2><p class="sub" id="logsub"></p></div>'
       +'<div class="field"><label for="logdate">Date</label><input type="date" id="logdate" max="'+todayStr()+'"></div></div><div id="logbody"></div>';
     $("#logdate").value=state.date;
   }
+  $("#logsub").innerHTML='Enter the litres each cow gave. Milk is worth KES '+fmtL(milkPrice())+' a litre.'
+    +(state.admin?' <button class="link" data-act="milk-price">Change price</button>':"");
   ensureMonth(monthOf(state.date));
   renderLogBody();
 }
@@ -708,7 +751,7 @@ function validateDraft(){
 function rowHTML(c){
   const saved=litresFor(c.id,state.date), key=state.date+"|"+c.id;
   const val = key in state.draft ? state.draft[key] : (saved===null?"":String(saved));
-  const n=parseFloat(val), kes=isFinite(n)&&n>0?fmtKES(n*PRICE):"";
+  const n=parseFloat(val), kes=isFinite(n)&&n>0?fmtKES(n*priceFor(c.id,state.date)):"";
   const meta=[c.name?"Tag "+c.tag:"",c.breed||"",c.status&&c.status!=="milking"?label(STATUSES,c.status):""].filter(Boolean).join(", ");
   return '<div class="row">'+coat(c.id,44)
     +'<div><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div></div>'
@@ -722,7 +765,7 @@ function renderLogBody(){
   const cows=loggableCows();
   let html="";
   if(!cows.length){
-    html+='<div class="ledger"><div class="empty"><p>'+(state.admin?"There are no cows in the herd yet. Add a cow, then come back to record milk.":"There are no cows in the herd yet. An admin needs to add them first.")+'</p>'+(state.admin?'<button class="btn" data-act="goto-herd">Go to herd</button>':"")+'</div></div>';
+    html+='<div class="ledger"><div class="empty"><p>'+(can("edit_herd")?"There are no cows in the herd yet. Add a cow, then come back to record milk.":"There are no cows in the herd yet. An admin needs to add them first.")+'</p>'+(can("edit_herd")?'<button class="btn" data-act="goto-herd">Go to herd</button>':"")+'</div></div>';
   } else {
     html+='<div class="ledger">'+cows.map(rowHTML).join("")+'</div>';
     html+='<div class="total"><div><div class="eq">Total for '+esc(fmtDate(state.date,{weekday:"short",day:"numeric",month:"short"}))+'</div><div class="big" id="tot-kes"></div><div class="eq" id="tot-l"></div></div>'
@@ -736,9 +779,9 @@ function renderLogBody(){
 
 function updateTotals(){
   const k=$("#tot-kes"); if(!k) return;
-  let l=0; for(const c of loggableCows()) l+=currentValue(c);
-  k.textContent=fmtKES(l*PRICE);
-  $("#tot-l").textContent=fmtL(l)+" litres at KES "+PRICE+" a litre";
+  let l=0, kes=0; for(const c of loggableCows()){ const v=currentValue(c); l+=v; kes+=v*priceFor(c.id,state.date); }
+  k.textContent=fmtKES(kes);
+  $("#tot-l").textContent=fmtL(l)+" litres recorded";
   const b=$("#savemilk"); if(b){ b.disabled = state.saving || pendingChanges().length===0; b.textContent = state.saving?"Saving…":"Save milk"; }
 }
 
@@ -754,7 +797,9 @@ async function saveMilk(){
     if(ups.length) await run(sb.from("milk_entries").upsert(ups,{onConflict:"cow_id,entry_date"}));
     for(const d of changes.filter(c=>c.value===null)) await run(sb.from("milk_entries").delete().eq("cow_id",d.id).eq("entry_date",date));
     changes.forEach(c=>{
-      if(c.value===null) delete state.milk[c.id+"|"+date]; else state.milk[c.id+"|"+date]=c.value;
+      const k=c.id+"|"+date;
+      if(c.value===null){ delete state.milk[k]; delete state.milkPrices[k]; }
+      else { state.milk[k]=c.value; if(!(k in state.milkPrices)) state.milkPrices[k]=milkPrice(); }
       delete state.draft[date+"|"+c.id];
     });
     toast("Milk saved");
@@ -775,116 +820,183 @@ function renderHerd(){
   if(!state.ready){ el.innerHTML=""; return; }
   const cows=sortedCows(state.cows);
   let html='<div class="logbar"><div><h2>Herd</h2><p class="sub">'
-    +(state.admin?"You're an admin, so you can add and edit cow records.":"Cow records are read-only. Ask an admin to change them.")
-    +'</p></div>'+(state.admin?'<button class="btn" data-act="add">Add cow</button>':"")+'</div>';
+    +(can("edit_herd")?"You can add and edit cow records.":"Cow records are read-only. Ask an admin to change them.")
+    +'</p></div>'+(can("edit_herd")?'<button class="btn" data-act="add">Add cow</button>':"")+'</div>';
   if(!cows.length){
-    html+='<div class="ledger"><div class="empty"><p>'+(state.admin?"No cows yet. Add your first cow to start the herd book.":"No cows have been added yet.")+'</p></div></div>';
+    html+='<div class="ledger"><div class="empty"><p>'+(can("edit_herd")?"No cows yet. Add your first cow to start the herd book.":"No cows have been added yet.")+'</p></div></div>';
   } else {
     html+='<div class="ledger">'+cows.map(cowRowHTML).join("")+'</div>';
   }
   el.innerHTML=html;
 }
 
-/* ----- Cereals ----- */
-function renderCereals(){
-  const el=$("#view-cereals");
+/* ----- Balances ----- */
+function stockRows(){
+  const rows=[{kind:"milk",id:null,name:"Milk",unit:"L",price:milkPrice(),qty:state.settings.milkStock}];
+  sortedCereals().forEach(c=>rows.push({kind:"cereal",id:c.id,name:c.name,unit:"kg",price:c.price,qty:c.qty}));
+  return rows;
+}
+function findStock(kind,id){ return stockRows().find(r=>r.kind===kind&&(r.id||"")===(id||"")); }
+function renderBalances(){
+  const el=$("#view-balances");
   if(!state.ready){ el.innerHTML=""; return; }
-  if(!el.querySelector("#cerbody")){
-    el.innerHTML='<div class="logbar"><div><h2>Cereals</h2><p class="sub">Enter how many kilograms were sold. The stock left updates by itself.</p></div>'
-      +(state.admin?'<button class="btn" data-act="add-cereal">Add cereal</button>':"")+'</div><div id="cerbody"></div>';
-  }
-  const btn=el.querySelector('.logbar [data-act=add-cereal]');
-  if(state.admin&&!btn) el.querySelector(".logbar").insertAdjacentHTML("beforeend",'<button class="btn" data-act="add-cereal">Add cereal</button>');
-  if(!state.admin&&btn) btn.remove();
-  renderCerealBody();
+  const ms=can("manage_stock"), rows=stockRows();
+  let total=0; rows.forEach(r=>{ total+=Math.max(0,r.qty)*r.price; });
+  let html='<div class="logbar"><div><h2>Balances</h2><p class="sub">How much of each product is left. Sales lower these figures automatically.'+(ms?"":" Admins keep the stock up to date.")+'</p></div>'
+    +(ms?'<button class="btn" data-act="add-cereal">Add cereal</button>':"")+'</div>';
+  html+='<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>';
+  html+='<div class="ledger">'+rows.map(r=>{
+    const out=r.qty<=0, attr='data-kind="'+r.kind+'" data-id="'+esc(r.id||"")+'"';
+    return '<div class="row"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
+      +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+esc(fmtKES(r.price)+" a "+(r.kind==="milk"?"litre":"kg")+(out?"":", worth "+fmtKES(r.qty*r.price)))+'</div>'
+      +(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':"")+'</div>'
+      +'<div class="entry"><div class="bal">'+fmtL(Math.max(0,r.qty))+' <small>'+r.unit+'</small></div>'+(out?'<span class="pill due">Out of stock</span>':"")+'</div></div>';
+  }).join("")+'</div>';
+  el.innerHTML=html;
 }
 
-function cerealRowHTML(c){
-  const rem=c.qty, out=rem<=0, raw=state.sdraft[c.id]||"";
-  const n=parseFloat(raw), kes=isFinite(n)&&n>0?fmtKES(n*c.price):"";
-  return '<div class="row"><div class="chip" aria-hidden="true">'+esc(String(c.name||"?").charAt(0).toUpperCase())+'</div>'
-    +'<div><div class="nm">'+esc(c.name)+'</div><div class="meta">'+esc(fmtKES(c.price)+" a kg, ")+(out?'<span class="pill due">Out of stock</span>':esc(fmtL(rem)+" kg left"))+'</div>'
-    +(state.admin?'<button class="link" data-act="edit-cereal" data-id="'+esc(c.id)+'">Edit '+esc(c.name)+'</button>':"")+'</div>'
-    +'<div class="entry"><div class="lit"><input type="number" inputmode="decimal" min="0" step="any" placeholder="0" data-cereal="'+esc(c.id)+'" aria-label="Kilograms of '+esc(c.name)+' sold" value="'+esc(raw)+'"'+(out?" disabled":"")+'><span>kg</span></div>'
-    +'<div class="kes" data-skes="'+esc(c.id)+'">'+kes+'</div></div></div>';
+function stockAddHTML(kind,id){
+  const r=findStock(kind,id); if(!r) return "";
+  return '<div class="dlg"><h2 style="margin-bottom:6px">Add stock: '+esc(r.name)+'</h2><p class="sub" style="margin-bottom:14px">In stock now: '+esc(fmtL(r.qty))+' '+r.unit+'. Enter the quantity you received.</p>'
+    +'<form id="addstockform" novalidate><div class="field"><label for="a-qty">Quantity to add <span class="hint">('+r.unit+')</span></label><input type="number" id="a-qty" inputmode="decimal" min="0" step="any"></div>'
+    +'<p class="sub" id="a-total" style="margin-top:10px"></p><div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Add stock</button></div></form></div>';
+}
+function updateAddTotal(){
+  const s=state.dlg, el=document.getElementById("a-total"); if(!s||!el) return;
+  const r=findStock(s.kind,s.id), n=parseFloat(document.getElementById("a-qty").value);
+  el.textContent = r&&isFinite(n)&&n>0 ? "New total: "+fmtL(r.qty+n)+" "+r.unit : "";
+}
+async function saveAddStock(){
+  const s=state.dlg, qty=parseFloat(document.getElementById("a-qty").value);
+  if(!(qty>0&&qty<=1e7)) return showErr("formerr","Enter a quantity above 0.");
+  document.getElementById("formerr").hidden=true; formBusy(true,"Adding…");
+  try{
+    await run(sb.rpc("add_stock",{p_kind:s.kind,p_cereal_id:s.id||null,p_qty:round2(qty)}));
+    await loadCore(); closeDlg(); toast("Stock added"); scheduleRender();
+  }catch(e){ showErr("formerr","Couldn't add the stock. "+friendly(e)); formBusy(false,"Add stock"); }
 }
 
-function pendingSalesTotals(){
-  let kg=0, kes=0;
-  for(const c of state.cereals){
-    const n=parseFloat(state.sdraft[c.id]);
-    if(isFinite(n)&&n>0){ kg+=n; kes+=n*c.price; }
-  }
-  return {kg:kg,kes:kes};
+function milkEditHTML(){
+  const ap=state.admin, ms=can("manage_stock");
+  return '<div class="dlg"><h2 style="margin-bottom:14px">Milk price and stock</h2><form id="milkeditform" novalidate><div class="grid2">'
+    +(ap?'<div class="field"><label for="m-price">Price per litre <span class="hint">(KES)</span></label><input type="number" id="m-price" inputmode="decimal" min="0" step="any" value="'+esc(milkPrice())+'"></div>':"")
+    +(ms?'<div class="field"><label for="m-qty">Quantity remaining <span class="hint">(litres)</span></label><input type="number" id="m-qty" inputmode="decimal" min="0" step="any" value="'+esc(state.settings.milkStock)+'"></div>':"")
+    +'</div><p class="sub" style="margin-top:12px">'+(ap?"A new price applies to new milk entries and sales from now on. Earlier ones keep the price they were made at. ":"")
+    +(ms?"Enter the litres you have now. Sales lower it automatically, so change it only to correct a count.":"")+'</p>'
+    +'<div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Save</button></div></form></div>';
 }
-function updateSalesTotals(){
-  const k=$("#stot-kes"); if(!k) return;
-  const t=pendingSalesTotals();
-  k.textContent=fmtKES(t.kes);
-  $("#stot-kg").textContent=fmtL(t.kg)+" kg to record";
-  const b=$("#recordsales"); if(b){ b.disabled=state.saving||t.kg<=0; b.textContent=state.saving?"Saving…":"Record sales"; }
+async function saveMilkEdit(){
+  const pe=document.getElementById("m-price"), qe=document.getElementById("m-qty");
+  let price=null, qty=null;
+  if(pe){ price=parseFloat(pe.value); if(!(price>0&&price<=MAX_KG)) return showErr("formerr","Enter a price per litre above 0, for example 70."); }
+  if(qe){ qty=parseFloat(qe.value); if(!(qty>=0&&qty<=1e7)) return showErr("formerr","Enter the litres remaining, 0 or more."); }
+  document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
+  try{
+    if(price!==null&&round2(price)!==round2(milkPrice())) await run(sb.rpc("set_milk_price",{p_price:round2(price)}));
+    if(qty!==null&&round2(qty)!==round2(state.settings.milkStock)) await run(sb.rpc("set_stock",{p_kind:"milk",p_cereal_id:null,p_qty:round2(qty)}));
+    await loadCore(); closeDlg(); toast("Milk price and stock saved"); scheduleRender();
+  }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,"Save"); }
 }
 
-function renderCerealBody(){
-  const body=$("#cerbody"); if(!body) return;
-  const active=document.activeElement, keep=(active&&active.dataset&&active.dataset.cereal&&body.contains(active))?active.dataset.cereal:null;
-  const cereals=sortedCereals(), today=todayStr();
-  let html="";
-  if(!cereals.length){
-    html+='<div class="ledger"><div class="empty"><p>'+(state.admin?"No cereals yet. Add a cereal with its price per kg and the quantity you have.":"No cereals have been added yet. An admin needs to add them first.")+'</p>'+(state.admin?'<button class="btn" data-act="add-cereal">Add cereal</button>':"")+'</div></div>';
-  } else {
-    let kgT=0, kesT=0;
-    for(const e of state.sales) if(e.d===today && findCereal(e.cerealId)){ kgT+=e.kg; kesT+=e.kg*e.p; }
-    html+='<p class="sumline">Sold today: <b>'+fmtL(kgT)+' kg</b> for <b>'+fmtKES(kesT)+'</b>.</p>';
-    html+='<div class="ledger">'+cereals.map(cerealRowHTML).join("")+'</div>';
-    html+='<div class="total"><div><div class="eq">This sale</div><div class="big" id="stot-kes"></div><div class="eq" id="stot-kg"></div></div>'
-      +'<button class="btn" id="recordsales" data-act="record-sales">Record sales</button></div>'
-      +'<div class="error" id="sellerr" role="alert" hidden></div>';
-    const recent=state.recent.filter(e=>findCereal(e.cerealId));
-    if(recent.length){
-      html+='<h3 class="sec">Recent sales</h3><div class="ledger">'+recent.map(e=>{
-        const c=findCereal(e.cerealId);
-        return '<div class="sale"><div><div class="nm">'+esc(fmtL(e.kg))+' kg of '+esc(c.name)+'</div><div class="meta">'+esc(fmtKES(e.kg*e.p)+" at "+fmtKES(e.p)+" a kg, "+fmtTime(e.ts))+'</div></div>'
-          +(state.admin?'<button class="btn ghost small" data-act="remove-sale" data-id="'+esc(e.id)+'" aria-label="Remove sale of '+esc(fmtL(e.kg))+' kg of '+esc(c.name)+'">Remove</button>':"")+'</div>';
-      }).join("")+'</div>';
-    }
+/* ----- Daily summary ----- */
+function nowClock(){ const d=new Date(); return pad(d.getHours())+":"+pad(d.getMinutes()); }
+function productName(x){ if(x.kind==="milk") return "Milk"; const c=findCereal(x.cerealId); return c?c.name:"Cereal"; }
+function productList(){
+  const list=[{value:"milk",kind:"milk",id:null,name:"Milk",unit:"L",price:milkPrice(),qty:state.settings.milkStock}];
+  sortedCereals().forEach(c=>list.push({value:"c:"+c.id,kind:"cereal",id:c.id,name:c.name,unit:"kg",price:c.price,qty:c.qty}));
+  return list;
+}
+function selectedProduct(){ const l=productList(); return l.find(p=>p.value===state.sale.product)||l[0]; }
+
+function renderDaily(){
+  const el=$("#view-daily");
+  if(!state.ready){ el.innerHTML=""; return; }
+  if(!el.querySelector("#dailybody")){
+    if(!state.sale.time) state.sale.time=nowClock();
+    el.innerHTML='<div class="logbar"><div><h2>Daily summary</h2><p class="sub">Record what you sold and when. Each sale lowers the stock.</p></div>'
+      +'<div class="field"><label for="dailydate">Date</label><input type="date" id="dailydate" max="'+todayStr()+'"></div></div>'
+      +'<form id="saleform" class="salecard" novalidate><div class="grid3">'
+      +'<div class="field"><label for="s-product">Product</label><select id="s-product"></select></div>'
+      +'<div class="field"><label for="s-qty">Quantity <span class="hint" id="s-unit"></span></label><input type="number" id="s-qty" inputmode="decimal" min="0" step="any" placeholder="0"></div>'
+      +'<div class="field"><label for="s-time">Time of sale</label><input type="time" id="s-time"></div></div>'
+      +'<div class="saleinfo" id="saleinfo"></div><div class="error" id="saleerr" role="alert" hidden></div>'
+      +'<button type="submit" class="btn" id="salebtn">Record sale</button></form>'
+      +'<div id="salenote"></div><div id="dailybody"></div>';
+    $("#dailydate").value=state.salesDate;
+    $("#s-qty").value=state.sale.qty; $("#s-time").value=state.sale.time;
   }
+  ensureMonth(monthOf(state.salesDate));
+  refreshSaleForm();
+  renderDailyBody();
+}
+function refreshSaleForm(){
+  const isToday=state.salesDate===todayStr();
+  $("#saleform").hidden=!isToday;
+  $("#salenote").innerHTML=isToday?"":'<div class="note">You can only record sales for today. This day is view only.</div>';
+  const sel=$("#s-product"), list=productList(), cur=state.sale.product;
+  sel.innerHTML=list.map(p=>'<option value="'+esc(p.value)+'">'+esc(p.name)+(p.qty<=0?" (out of stock)":"")+'</option>').join("");
+  sel.value=list.some(p=>p.value===cur)?cur:"milk"; state.sale.product=sel.value;
+  updateSaleInfo();
+}
+function updateSaleInfo(){
+  const info=$("#saleinfo"); if(!info) return;
+  const p=selectedProduct(), n=parseFloat(state.sale.qty), word=p.kind==="milk"?"litre":"kg";
+  $("#s-unit").textContent="("+(p.kind==="milk"?"litres":"kg")+")";
+  info.innerHTML=esc(fmtKES(p.price)+" a "+word+". ")+(p.qty>0?esc(fmtL(p.qty)+" "+p.unit+" left in stock."):"Out of stock.")
+    +(isFinite(n)&&n>0?' Amount: <b>'+esc(fmtKES(n*p.price))+'</b>':"");
+}
+function renderDailyBody(){
+  const body=$("#dailybody"); if(!body) return;
+  const d=state.salesDate;
+  if(!state.loadedMonths.has(monthOf(d))){ body.innerHTML='<div class="note">Loading…</div>'; return; }
+  const day=state.sales.filter(x=>x.d===d).sort((a,b)=>a.ts-b.ts);
+  const label=fmtDate(d,{weekday:"long",day:"numeric",month:"long"});
+  if(!day.length){ body.innerHTML='<div class="ledger"><div class="empty"><p>No sales recorded on '+esc(label)+'.</p></div></div>'; return; }
+  let total=0; const agg={};
+  day.forEach(x=>{
+    const amt=x.qty*x.p; total+=amt;
+    const key=x.kind==="milk"?"milk":x.cerealId;
+    const a=agg[key]||(agg[key]={name:productName(x),unit:x.kind==="milk"?"L":"kg",qty:0,amt:0}); a.qty+=x.qty; a.amt+=amt;
+  });
+  let html='<p class="sumline">Sales on '+esc(label)+': <b>'+esc(fmtKES(total))+'</b> from '+day.length+(day.length===1?" sale":" sales")+'.</p>';
+  html+='<h3 class="sec" style="margin-top:0">Sales by time</h3><div class="ledger">'+day.map(x=>{
+    const unit=x.kind==="milk"?"L":"kg", nm=productName(x);
+    return '<div class="sale"><div><div class="nm">'+esc(fmtClock(x.ts))+', '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'</div><div class="meta">at '+esc(fmtKES(x.p))+' a '+(x.kind==="milk"?"litre":"kg")+'</div></div>'
+      +'<div class="saleamt">'+esc(fmtKES(x.qty*x.p))+(can("remove_sales")?'<button class="btn ghost small" data-act="remove-sale" data-id="'+esc(x.id)+'" aria-label="Remove sale of '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'">Remove</button>':"")+'</div></div>';
+  }).join("")+'</div>';
+  html+='<h3 class="sec">Totals by product</h3><div class="scroll"><table><thead><tr><th>Product</th><th>Quantity sold</th><th>Amount</th></tr></thead><tbody>'
+    +Object.keys(agg).map(k=>{ const a=agg[k]; return '<tr><td>'+esc(a.name)+'</td><td>'+fmtL(a.qty)+' '+a.unit+'</td><td>'+fmtKES(a.amt)+'</td></tr>'; }).join("")
+    +'</tbody><tfoot><tr><td>Total sales</td><td></td><td>'+fmtKES(total)+'</td></tr></tfoot></table></div>';
   body.innerHTML=html;
-  updateSalesTotals();
-  if(keep){ const inp=body.querySelector('input[data-cereal="'+CSS.escape(keep)+'"]'); if(inp) inp.focus(); }
 }
-
-async function recordSales(){
-  const errEl=$("#sellerr"), rows=[];
-  for(const c of sortedCereals()){
-    const raw=String(state.sdraft[c.id]||"").trim(); if(!raw) continue;
-    const n=parseFloat(raw);
-    if(!isFinite(n)||n<=0){ errEl.textContent=c.name+": enter kilograms as a number above 0."; errEl.hidden=false; return; }
-    if(n>MAX_KG){ errEl.textContent=c.name+": that quantity is too large."; errEl.hidden=false; return; }
-    if(c.qty<=0){ errEl.textContent=c.name+" is out of stock."; errEl.hidden=false; return; }
-    if(n>c.qty+1e-9){ errEl.textContent="Only "+fmtL(c.qty)+" kg of "+c.name+" is left. You entered "+fmtL(n)+" kg."; errEl.hidden=false; return; }
-    rows.push({c:c,kg:round2(n)});
-  }
-  if(!rows.length) return;
-  errEl.hidden=true; state.saving=true; updateSalesTotals();
-  const date=todayStr();
-  let failed=0, lastErr=null;
-  for(const r of rows){
-    try{
-      await run(sb.rpc("record_sale",{p_cereal_id:r.c.id,p_kg:r.kg,p_sold_on:date}));
-      delete state.sdraft[r.c.id];
-    }catch(e){ failed++; lastErr=e; }
-  }
-  state.saving=false;
-  try{ await loadCore(); await loadMonth(monthOf(date)); }catch(e){}
-  if(failed) toast("Couldn't record "+failed+(failed===1?" sale. ":" sales. ")+friendly(lastErr),true); else toast("Sales recorded");
-  renderCerealBody();
+async function recordSaleFromForm(){
+  const errEl=$("#saleerr"), btn=$("#salebtn"); errEl.hidden=true;
+  const p=selectedProduct(), n=parseFloat(state.sale.qty), time=state.sale.time;
+  const fail=m=>{ errEl.textContent=m; errEl.hidden=false; };
+  if(!(n>0)) return fail("Enter the quantity sold.");
+  if(n>MAX_KG) return fail("That quantity is too large.");
+  if(p.qty<=0) return fail(p.name+" is out of stock.");
+  if(n>p.qty+1e-9) return fail("Only "+fmtL(p.qty)+" "+p.unit+" of "+p.name+" is left. You entered "+fmtL(n)+".");
+  if(!/^\d{2}:\d{2}$/.test(time||"")) return fail("Enter the time of the sale.");
+  const t=time.split(":").map(Number), when=new Date(); when.setHours(t[0],t[1],0,0);
+  if(when.getTime()>Date.now()+5*60000) return fail("The time can't be in the future.");
+  btn.disabled=true; btn.textContent="Recording…";
+  try{
+    await run(sb.rpc("record_sale",{p_kind:p.kind,p_cereal_id:p.id,p_qty:round2(n),p_sold_at:when.toISOString()}));
+    state.sale.qty=""; state.sale.time=nowClock(); $("#s-qty").value=""; $("#s-time").value=state.sale.time;
+    await loadCore(); await loadMonth(monthOf(todayStr()));
+    toast("Sale recorded");
+  }catch(e){ fail(friendly(e)); }
+  btn.disabled=false; btn.textContent="Record sale";
+  refreshSaleForm(); renderDailyBody();
 }
 async function removeSale(id){
   try{ await run(sb.rpc("void_sale",{p_sale_id:id})); toast("Sale removed"); }
   catch(e){ toast("Couldn't remove the sale. "+friendly(e),true); }
   try{ await loadCore(); await Promise.all(Array.from(state.loadedMonths).map(loadMonth)); }catch(e){}
-  renderCerealBody();
+  scheduleRender();
 }
 
 /* ----- Members (admins only) ----- */
@@ -906,7 +1018,16 @@ function memberRowHTML(m){
   return '<button class="cow" data-act="open-member" data-id="'+esc(m.id)+'"><div class="chip" aria-hidden="true">'+initial(name)+'</div>'
     +'<div><div class="nm">'+esc(name)+(m.is_me?" (you)":"")+'</div>'
     +'<div class="meta">'+esc((m.email||"")+(joined?(m.email?", ":"")+"joined "+joined:""))+'</div></div>'
-    +'<div class="tags"><span class="pill '+(isAdmin?"admin":"")+'">'+(isAdmin?"Admin":"Normal user")+'</span></div></button>';
+    +'<div class="tags"><span class="pill '+(isAdmin?"admin":"")+'">'+(isAdmin?"Admin":"Normal user")+'</span>'+(m.role_name?'<span class="pill">'+esc(m.role_name)+'</span>':"")+'</div></button>';
+}
+function rolesHTML(members){
+  if(!state.roles.length) return '<div class="ledger"><div class="empty"><p>No extra roles yet. Create one to give some members more to do.</p></div></div>';
+  return '<div class="ledger">'+state.roles.map(r=>{
+    const n=members.filter(m=>m.role_id===r.id).length;
+    const perms=(r.permissions||[]).map(k=>{ const p=PERMS.find(x=>x[0]===k); return p?p[1]:k; }).join(", ")||"No extra permissions";
+    return '<div class="rolerow"><div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+(r.description?esc(r.description)+". ":"")+esc(perms)+", "+n+(n===1?" member":" members")+'</div></div>'
+      +'<div class="pactions" style="margin:0"><button class="btn ghost small" data-act="role-edit" data-id="'+esc(r.id)+'">Edit</button><button class="btn danger small" data-act="role-ask-delete" data-id="'+esc(r.id)+'">Delete</button></div></div>';
+  }).join("")+'</div>';
 }
 function renderMembers(){
   const el=$("#view-members");
@@ -920,6 +1041,8 @@ function renderMembers(){
   el.innerHTML='<div class="logbar"><div><h2>Members</h2><p class="sub">Everyone who has registered. Click a member to open their card and manage their role.</p></div></div>'
     +'<p class="sumline"><b>'+total+' registered '+(total===1?"member":"members")+'</b>: '+admins+(admins===1?" admin":" admins")+' and '+users+(users===1?" normal user":" normal users")+'.</p>'
     +'<div class="ledger">'+M.list.map(memberRowHTML).join("")+'</div>'
+    +'<div class="logbar" style="margin-top:30px"><div><h3 class="sec" style="margin:0">Roles</h3><p class="sub">Create extra roles, such as Storekeeper, and choose what each can do. Then assign a role to a member from their card.</p></div><button class="btn" data-act="role-create">Create role</button></div>'
+    +rolesHTML(M.list)
     +'<div class="switchrow"><label><input type="checkbox" id="admsignup"'+(M.allowAdminSignup?" checked":"")+'> Let new sign-ups become admins with the PIN</label>'
     +'<p class="sub">When this is on, a new account that enters the correct admin PIN in its first 24 hours becomes an admin straight away. Turn it off once your admins are set up, so only existing admins can grant the role.</p></div>';
 }
@@ -934,6 +1057,50 @@ async function removeMember(){
   btn.disabled=true; btn.textContent="Removing…"; errEl.hidden=true;
   try{ await run(sb.rpc("remove_member",{p_user_id:id})); closeDlg(); toast("Member removed"); loadMembers(); }
   catch(e){ errEl.textContent="Couldn't remove the member. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Remove member"; }
+}
+async function assignRole(userId,roleId){
+  try{ await run(sb.rpc("assign_role",{p_user_id:userId,p_role_id:roleId})); toast(roleId?"Role assigned":"Extra role removed"); }
+  catch(e){ toast("Couldn't change the role. "+friendly(e),true); }
+  loadMembers();
+}
+function roleFormHTML(r){
+  const have=(r&&r.permissions)||[];
+  return '<div class="dlg"><h2 style="margin-bottom:6px">'+(r?"Edit role":"Create a role")+'</h2><p class="sub" style="margin-bottom:14px">Everyone can already view, record milk and record sales. Tick anything extra this role can do.</p>'
+    +'<form id="roleform" novalidate><div class="stack"><div class="field"><label for="r-name">Role name</label><input type="text" id="r-name" maxlength="40" placeholder="Storekeeper" value="'+esc(r&&r.name)+'"></div>'
+    +'<div class="field"><label for="r-desc">Description <span class="hint">(optional)</span></label><input type="text" id="r-desc" maxlength="200" value="'+esc(r&&r.description)+'"></div>'
+    +'<fieldset><legend>Extra permissions</legend><div class="permlist">'
+    +PERMS.map(pm=>'<label class="perm"><input type="checkbox" name="perm" value="'+pm[0]+'"'+(have.indexOf(pm[0])>=0?" checked":"")+'><div><b>'+esc(pm[1])+'</b><span>'+esc(pm[2])+'</span></div></label>').join("")
+    +'</div></fieldset></div><div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Save role</button></div></form></div>';
+}
+function roleConfirmHTML(r){
+  return '<div class="dlg"><h2>Delete the '+esc(r.name)+' role?</h2><p>Members who have this role go back to having no extra role. It can\'t be undone.</p>'
+    +'<div class="error" id="delerr" role="alert" hidden></div>'
+    +'<div class="actions"><button class="btn ghost" data-act="close">Keep role</button><button class="btn danger" id="delbtn" data-act="role-delete">Delete role</button></div></div>';
+}
+async function saveRole(){
+  const g=id=>document.getElementById(id).value.trim();
+  const name=g("r-name"), desc=g("r-desc"), perms=Array.prototype.map.call(document.querySelectorAll("#roleform input[name=perm]:checked"),x=>x.value);
+  const editing=state.dlg&&state.dlg.id?state.roles.find(r=>r.id===state.dlg.id):null;
+  if(name.length<2||name.length>40) return showErr("formerr","Enter a role name of 2 to 40 characters.");
+  if(["admin","normal user","member"].indexOf(name.toLowerCase())>=0) return showErr("formerr","Choose a different name. \""+name+"\" is already used by the system.");
+  if(state.roles.find(r=>r.id!==(editing&&editing.id)&&r.name.toLowerCase()===name.toLowerCase())) return showErr("formerr","There is already a role called "+name+".");
+  document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
+  const row={name:name,description:desc||null,permissions:perms};
+  try{
+    if(editing) needRows(await run(sb.from("roles").update(row).eq("id",editing.id).select("id")));
+    else await run(sb.from("roles").insert(row));
+    await loadCore(); closeDlg(); toast("Role saved"); loadMembers(); scheduleRender();
+  }catch(e){ showErr("formerr","Couldn't save the role. "+friendly(e)); formBusy(false,"Save role"); }
+}
+async function deleteRole(){
+  const id=state.dlg&&state.dlg.id, btn=document.getElementById("delbtn"), errEl=document.getElementById("delerr");
+  if(!id) return;
+  btn.disabled=true; btn.textContent="Deleting…"; errEl.hidden=true;
+  try{
+    needRows(await run(sb.from("roles").delete().eq("id",id).select("id")));
+    await loadCore(); closeDlg(); toast("Role deleted"); loadMembers(); scheduleRender();
+  }catch(e){ errEl.textContent="Couldn't delete the role. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Delete role"; }
 }
 async function setAdminSignup(on){
   try{ await run(sb.rpc("set_admin_signup",{p_allow:on})); toast(on?"New sign-ups can become admins":"New sign-ups can no longer become admins"); }
@@ -953,44 +1120,50 @@ function renderSummary(){
     ensureMonth(m);
     el.innerHTML=html+'<div class="note" style="margin-top:14px">Loading '+esc(monthLabel(m))+'…</div>'; return;
   }
-  const perDay=new Array(dim).fill(0), perCowMap={}, pre="|"+m;
+  const perDay=new Array(dim).fill(0), perCowMap={};
+  let totalKes=0;
   for(const k in state.milk){
-    const i=k.indexOf("|"); if(k.slice(i+1,i+1+7)!==m) continue;
-    const cowId=k.slice(0,i), day=parseInt(k.slice(i+9,i+11),10), v=state.milk[k];
+    const i=k.indexOf("|"); if(k.slice(i+1,i+8)!==m) continue;
+    const cowId=k.slice(0,i), dateStr=k.slice(i+1), day=parseInt(dateStr.slice(8,10),10), v=state.milk[k];
     if(!(day>=1&&day<=dim)||!findCow(cowId)) continue;
-    perDay[day-1]+=v;
-    const a=perCowMap[cowId]||(perCowMap[cowId]={c:findCow(cowId),l:0,days:0}); a.l+=v; if(v>0) a.days++;
+    const val=v*priceFor(cowId,dateStr);
+    perDay[day-1]+=v; totalKes+=val;
+    const a=perCowMap[cowId]||(perCowMap[cowId]={c:findCow(cowId),l:0,days:0,kes:0}); a.l+=v; a.kes+=val; if(v>0) a.days++;
   }
   const perCow=Object.keys(perCowMap).map(k=>perCowMap[k]).filter(p=>p.l>0).sort((a,b)=>b.l-a.l);
   const total=round2(perDay.reduce((a,b)=>a+b,0));
 
-  html+='<h3 class="sec">Milk</h3>';
+  html+='<h3 class="sec">Milk produced</h3>';
   if(total<=0){
     html+='<div class="ledger"><div class="empty"><p>No milk was recorded in '+esc(monthLabel(m))+'.</p></div></div>';
   } else {
-    html+='<p class="sumline" style="margin-top:0"><b>'+fmtL(total)+' litres</b> at KES '+PRICE+' a litre is <b>'+fmtKES(total*PRICE)+'</b>.</p>';
+    html+='<p class="sumline" style="margin-top:0"><b>'+fmtL(total)+' litres</b> recorded, worth <b>'+fmtKES(totalKes)+'</b>.</p>';
     const items=perDay.map((v,i)=>({v:v,t:fmtDate(m+"-"+pad(i+1),{day:"numeric",month:"short"})+": "+fmtL(v)+" L"}));
     html+=bars(items,"Litres of milk per day in "+monthLabel(m),"1 "+fmtDate(m+"-01",{month:"short"}),dim+" "+fmtDate(m+"-01",{month:"short"}));
-    html+='<div class="scroll"><table><thead><tr><th>Cow</th><th>Days recorded</th><th>Litres</th><th>Average a day</th><th>Earnings</th></tr></thead><tbody>'
-      +perCow.map(p=>'<tr><td>'+esc(cowLabel(p.c))+'</td><td>'+p.days+'</td><td>'+fmtL(p.l)+'</td><td>'+(p.days?fmtL(p.l/p.days):"")+'</td><td>'+fmtKES(p.l*PRICE)+'</td></tr>').join("")
-      +'</tbody><tfoot><tr><td>Whole herd</td><td></td><td>'+fmtL(total)+'</td><td></td><td>'+fmtKES(total*PRICE)+'</td></tr></tfoot></table></div>';
+    html+='<div class="scroll"><table><thead><tr><th>Cow</th><th>Days recorded</th><th>Litres</th><th>Average a day</th><th>Value</th></tr></thead><tbody>'
+      +perCow.map(p=>'<tr><td>'+esc(cowLabel(p.c))+'</td><td>'+p.days+'</td><td>'+fmtL(p.l)+'</td><td>'+(p.days?fmtL(p.l/p.days):"")+'</td><td>'+fmtKES(p.kes)+'</td></tr>').join("")
+      +'</tbody><tfoot><tr><td>Whole herd</td><td></td><td>'+fmtL(total)+'</td><td></td><td>'+fmtKES(totalKes)+'</td></tr></tfoot></table></div>';
   }
 
-  html+='<h3 class="sec">Cereals sold</h3>';
+  html+='<h3 class="sec">Sales</h3>';
   const agg={};
   for(const e of state.sales){
     if(monthOf(e.d)!==m) continue;
-    const c=findCereal(e.cerealId); if(!c) continue;
-    const a=agg[c.id]||(agg[c.id]={c:c,kg:0,kes:0}); a.kg+=e.kg; a.kes+=e.kg*e.p;
+    if(e.kind==="cereal"&&!findCereal(e.cerealId)) continue;
+    const key=e.kind==="milk"?"milk":e.cerealId;
+    const a=agg[key]||(agg[key]={name:productName(e),kind:e.kind,cerealId:e.cerealId,qty:0,kes:0}); a.qty+=e.qty; a.kes+=e.qty*e.p;
   }
   const list=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>b.kes-a.kes);
   if(!list.length){
-    html+='<div class="ledger"><div class="empty"><p>No cereals were sold in '+esc(monthLabel(m))+'.</p></div></div>';
+    html+='<div class="ledger"><div class="empty"><p>Nothing was sold in '+esc(monthLabel(m))+'.</p></div></div>';
   } else {
-    let kgT=0, kesT=0; list.forEach(a=>{ kgT+=a.kg; kesT+=a.kes; });
-    html+='<div class="scroll"><table><thead><tr><th>Cereal</th><th>Kg sold</th><th>Sales value</th><th>Kg left now</th></tr></thead><tbody>'
-      +list.map(a=>'<tr><td>'+esc(a.c.name)+'</td><td>'+fmtL(a.kg)+'</td><td>'+fmtKES(a.kes)+'</td><td>'+fmtL(Math.max(0,a.c.qty))+'</td></tr>').join("")
-      +'</tbody><tfoot><tr><td>All cereals</td><td>'+fmtL(kgT)+'</td><td>'+fmtKES(kesT)+'</td><td></td></tr></tfoot></table></div>';
+    let kesT=0; list.forEach(a=>{ kesT+=a.kes; });
+    html+='<div class="scroll"><table><thead><tr><th>Product</th><th>Quantity sold</th><th>Sales value</th><th>Left in stock now</th></tr></thead><tbody>'
+      +list.map(a=>{
+        const unit=a.kind==="milk"?"L":"kg", left=a.kind==="milk"?state.settings.milkStock:(findCereal(a.cerealId)||{qty:0}).qty;
+        return '<tr><td>'+esc(a.name)+'</td><td>'+fmtL(a.qty)+' '+unit+'</td><td>'+fmtKES(a.kes)+'</td><td>'+fmtL(Math.max(0,left))+' '+unit+'</td></tr>';
+      }).join("")
+      +'</tbody><tfoot><tr><td>All products</td><td></td><td>'+fmtKES(kesT)+'</td><td></td></tr></tfoot></table></div>';
   }
   el.innerHTML=html;
 }
@@ -1000,12 +1173,19 @@ function openDlg(){ const d=$("#dlg"); if(!d.open) d.showModal(); }
 function closeDlg(){ const d=$("#dlg"); if(d.open) d.close(); state.dlg=null; }
 function openDetail(id){ state.dlg={mode:"detail",id:id}; renderDialog(); openDlg(); }
 function openForm(id){ state.dlg={mode:"form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("f-tag"); if(f) f.focus(); }
+function openStockAdd(kind,id){ state.dlg={mode:"stock-add",kind:kind,id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("a-qty"); if(f) f.focus(); }
+function openMilkEdit(){ state.dlg={mode:"milk-edit"}; renderDialog(); openDlg(); const f=document.getElementById("m-price")||document.getElementById("m-qty"); if(f) f.focus(); }
+function openRoleForm(id){ state.dlg={mode:"role-form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("r-name"); if(f) f.focus(); }
 function openCerealForm(id){ state.dlg={mode:"cereal-form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("c-name"); if(f) f.focus(); }
 
 function renderDialog(){
   const d=$("#dlg"), s=state.dlg; if(!s) return;
   if(s.mode==="form"){ d.innerHTML=formHTML(s.id?findCow(s.id):null); return; }
   if(s.mode==="cereal-form"){ d.innerHTML=cerealFormHTML(s.id?findCereal(s.id):null); return; }
+  if(s.mode==="stock-add"){ d.innerHTML=stockAddHTML(s.kind,s.id); return; }
+  if(s.mode==="milk-edit"){ d.innerHTML=milkEditHTML(); return; }
+  if(s.mode==="role-form"){ d.innerHTML=roleFormHTML(s.id?state.roles.find(r=>r.id===s.id):null); return; }
+  if(s.mode==="role-confirm"){ const r=state.roles.find(x=>x.id===s.id); if(!r){ closeDlg(); return; } d.innerHTML=roleConfirmHTML(r); return; }
   if(s.mode==="profile"){ d.innerHTML=ownCardHTML(s.note); return; }
   if(s.mode==="profile-edit"){ d.innerHTML=profileFormHTML(); return; }
   if(s.mode==="profile-email"){ d.innerHTML=emailFormHTML(); return; }
@@ -1033,16 +1213,16 @@ function detailHTML(c){
     ["Expected calving",due?esc(fmtDate(due.due))+" (about "+GESTATION_DAYS+" days after insemination)":none],
     ["Weight",c.weight?esc(c.weight)+" kg":none]
   ];
-  const today=todayStr(); let l14=0; const items=[];
-  for(let i=13;i>=0;i--){ const dt=addDays(today,-i), v=litresFor(c.id,dt)||0; l14+=v; items.push({v:v,t:fmtDate(dt,{day:"numeric",month:"short"})+": "+fmtL(v)+" L"}); }
-  const ent=monthEntries(c.id,today.slice(0,7)); let lm=0; for(const k in ent) lm+=ent[k];
+  const today=todayStr(); let l14=0, k14=0; const items=[];
+  for(let i=13;i>=0;i--){ const dt=addDays(today,-i), v=litresFor(c.id,dt)||0; l14+=v; k14+=v*priceFor(c.id,dt); items.push({v:v,t:fmtDate(dt,{day:"numeric",month:"short"})+": "+fmtL(v)+" L"}); }
+  const ent=monthEntries(c.id,today.slice(0,7)); let lm=0, km=0; for(const k in ent){ lm+=ent[k]; km+=ent[k]*priceFor(c.id,k); }
   return '<div class="dlg"><div class="dhead">'+coat(c.id,64)+'<div><h2>'+esc(cowLabel(c))+'</h2><div class="meta">'+(c.name?"Tag "+esc(c.tag):"")+'</div></div></div>'
     +'<dl class="facts">'+facts.map(f=>'<dt>'+f[0]+'</dt><dd>'+f[1]+'</dd>').join("")+'</dl>'
     +(c.health?'<div class="block"><h3>Health and treatment</h3><p>'+esc(c.health)+'</p></div>':"")
     +(c.notes?'<div class="block"><h3>Other notes</h3><p>'+esc(c.notes)+'</p></div>':"")
-    +'<div class="block"><h3>Milk</h3><p>Last 14 days: '+fmtL(l14)+' litres, '+fmtKES(l14*PRICE)+'. This month: '+fmtL(lm)+' litres, '+fmtKES(lm*PRICE)+'.</p>'
+    +'<div class="block"><h3>Milk</h3><p>Last 14 days: '+fmtL(l14)+' litres, '+fmtKES(k14)+'. This month: '+fmtL(lm)+' litres, '+fmtKES(km)+'.</p>'
     +bars(items,"Litres of milk per day for the last 14 days",fmtDate(addDays(today,-13),{day:"numeric",month:"short"}),"Today")+'</div>'
-    +'<div class="actions">'+(state.admin?'<button class="btn danger" data-act="ask-delete">Delete cow</button><button class="btn" data-act="edit">Edit cow</button>':"")
+    +'<div class="actions">'+(can("edit_herd")?'<button class="btn danger" data-act="ask-delete">Delete cow</button><button class="btn" data-act="edit">Edit cow</button>':"")
     +'<button class="btn ghost" data-act="close">Close</button></div></div>';
 }
 
@@ -1085,27 +1265,29 @@ function cerealFormHTML(c){
 }
 /* ----- Profile cards and edit forms ----- */
 const PHONE_RE=/^[0-9+() -]{7,20}$/;
-function cardHTML(p,actions,note){
+function cardHTML(p,actions,note,extra){
   const isAdmin=p.role==="admin", name=p.name||p.email||"Unnamed";
   const none='<span class="none">Not added</span>', val=v=>v?esc(v):none;
   const joined=p.created_at?esc(fmtDate(fmtISO(new Date(p.created_at)))):none;
   return '<div class="dlg">'+(note?'<div class="note" role="status">'+esc(note)+'</div>':"")
     +'<div class="dhead"><div class="chip big" aria-hidden="true">'+initial(name)+'</div><div><h2>'+esc(name)+'</h2><span class="pill '+(isAdmin?"admin":"")+'">'+(isAdmin?"Admin":"Normal user")+'</span></div></div>'
-    +'<dl class="facts"><dt>Email</dt><dd>'+val(p.email)+'</dd><dt>Phone</dt><dd>'+val(p.phone)+'</dd><dt>Job on the farm</dt><dd>'+val(p.job_title)+'</dd><dt>Town or area</dt><dd>'+val(p.area)+'</dd><dt>Member since</dt><dd>'+joined+'</dd></dl>'
-    +'<div class="actions">'+actions+'</div></div>';
+    +'<dl class="facts"><dt>Email</dt><dd>'+val(p.email)+'</dd><dt>Phone</dt><dd>'+val(p.phone)+'</dd><dt>Extra role</dt><dd>'+val(p.role_name)+'</dd><dt>Job on the farm</dt><dd>'+val(p.job_title)+'</dd><dt>Town or area</dt><dd>'+val(p.area)+'</dd><dt>Member since</dt><dd>'+joined+'</dd></dl>'
+    +(extra||"")+'<div class="actions">'+actions+'</div></div>';
 }
 function me(){
   const pr=state.profile||{};
-  return {name:pr.name,email:(state.user&&state.user.email)||pr.email,role:pr.role||"user",phone:pr.phone,job_title:pr.job_title,area:pr.area,created_at:pr.created_at};
+  return {name:pr.name,email:(state.user&&state.user.email)||pr.email,role:pr.role||"user",phone:pr.phone,job_title:pr.job_title,area:pr.area,created_at:pr.created_at,role_name:roleName()};
 }
 function ownCardHTML(note){
   return cardHTML(me(),'<button class="btn ghost" data-act="change-password">Change password</button><button class="btn ghost" data-act="change-email">Change email</button><button class="btn" data-act="edit-profile">Edit details</button><button class="btn ghost" data-act="close">Close</button>',note);
 }
 function memberCardHTML(m){
   const isAdmin=m.role==="admin";
+  const opts='<option value="">No extra role</option>'+state.roles.map(r=>'<option value="'+esc(r.id)+'"'+(m.role_id===r.id?" selected":"")+'>'+esc(r.name)+'</option>').join("");
+  const extra='<div class="field" style="margin:0 0 6px"><label for="assignrole">Extra role</label><select id="assignrole" data-user="'+esc(m.id)+'">'+opts+'</select></div>';
   return cardHTML(m,'<button class="btn danger" data-act="ask-remove-member" data-id="'+esc(m.id)+'">Remove member</button>'
     +'<button class="btn" data-act="set-role" data-id="'+esc(m.id)+'" data-role="'+(isAdmin?"user":"admin")+'">'+(isAdmin?"Make normal user":"Make admin")+'</button>'
-    +'<button class="btn ghost" data-act="close">Close</button>');
+    +'<button class="btn ghost" data-act="close">Close</button>',"",extra);
 }
 function openProfile(){ state.dlg={mode:"profile"}; renderDialog(); openDlg(); }
 function openProfileForm(mode,focusId){ state.dlg={mode:mode}; renderDialog(); openDlg(); const f=document.getElementById(focusId); if(f) f.focus(); }
@@ -1325,7 +1507,13 @@ document.addEventListener("click",e=>{
     case "ask-delete-cereal": state.dlg={mode:"cereal-confirm",id:state.dlg.id}; renderDialog(); break;
     case "cancel-delete-cereal": openCerealForm(state.dlg.id); break;
     case "delete-cereal": deleteCereal(); break;
-    case "record-sales": recordSales(); break;
+    case "milk-price": openMilkEdit(); break;
+    case "stock-add": openStockAdd(a.dataset.kind,a.dataset.id); break;
+    case "stock-edit": if(a.dataset.kind==="milk") openMilkEdit(); else openCerealForm(a.dataset.id); break;
+    case "role-create": openRoleForm(null); break;
+    case "role-edit": openRoleForm(a.dataset.id); break;
+    case "role-ask-delete": state.dlg={mode:"role-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
+    case "role-delete": deleteRole(); break;
     case "remove-sale": removeSale(a.dataset.id); break;
     case "prev-month": state.month=shiftMonth(state.month,-1); renderSummary(); break;
     case "next-month": state.month=shiftMonth(state.month,1); renderSummary(); break;
@@ -1337,17 +1525,17 @@ document.addEventListener("input",e=>{
   if(inp){
     state.draft[state.date+"|"+inp.dataset.cow]=inp.value;
     const n=parseFloat(inp.value), k=document.querySelector('[data-kes="'+CSS.escape(inp.dataset.cow)+'"]');
-    if(k) k.textContent=isFinite(n)&&n>0?fmtKES(n*PRICE):"";
+    if(k) k.textContent=isFinite(n)&&n>0?fmtKES(n*priceFor(inp.dataset.cow,state.date)):"";
     const er=$("#logerr"); if(er) er.hidden=true;
     updateTotals(); return;
   }
-  const ci=t.closest("input[data-cereal]");
-  if(ci){
-    state.sdraft[ci.dataset.cereal]=ci.value;
-    const c=findCereal(ci.dataset.cereal), n=parseFloat(ci.value), k=document.querySelector('[data-skes="'+CSS.escape(ci.dataset.cereal)+'"]');
-    if(k&&c) k.textContent=isFinite(n)&&n>0?fmtKES(n*c.price):"";
-    const er=$("#sellerr"); if(er) er.hidden=true;
-    updateSalesTotals();
+  if(t.id==="a-qty"){ updateAddTotal(); return; }
+  if(t.closest("#saleform")){
+    if(t.id==="s-qty") state.sale.qty=t.value;
+    else if(t.id==="s-time") state.sale.time=t.value;
+    else if(t.id==="s-product") state.sale.product=t.value;
+    const er=$("#saleerr"); if(er) er.hidden=true;
+    updateSaleInfo();
   }
 });
 document.addEventListener("change",e=>{
@@ -1359,6 +1547,13 @@ document.addEventListener("change",e=>{
     return;
   }
   if(t.id==="admsignup"){ setAdminSignup(t.checked); return; }
+  if(t.id==="assignrole"){ assignRole(t.dataset.user,t.value||null); return; }
+  if(t.id==="s-product"){ state.sale.product=t.value; updateSaleInfo(); return; }
+  if(t.id==="dailydate"){
+    if(!t.value){ t.value=state.salesDate; return; }
+    state.salesDate=t.value>todayStr()?todayStr():t.value; t.value=state.salesDate;
+    ensureMonth(monthOf(state.salesDate)); refreshSaleForm(); renderDailyBody(); return;
+  }
   if(t.id!=="logdate") return;
   const v=t.value;
   if(!v){ t.value=state.date; return; }
@@ -1367,10 +1562,9 @@ document.addEventListener("change",e=>{
   renderLogBody();
 });
 document.addEventListener("keydown",e=>{
-  if(e.key==="Enter"&&e.target.matches&&e.target.matches("input[data-cow], input[data-cereal]")){
+  if(e.key==="Enter"&&e.target.matches&&e.target.matches("input[data-cow]")){
     e.preventDefault();
-    const sel=e.target.hasAttribute("data-cow")?"#logbody input[data-cow]":"#cerbody input[data-cereal]";
-    const all=Array.from(document.querySelectorAll(sel)).filter(x=>!x.disabled), i=all.indexOf(e.target);
+    const all=Array.from(document.querySelectorAll("#logbody input[data-cow]")).filter(x=>!x.disabled), i=all.indexOf(e.target);
     if(i>=0&&i<all.length-1) all[i+1].focus(); else e.target.blur();
   }
 });
@@ -1378,6 +1572,10 @@ document.addEventListener("submit",e=>{
   const id=e.target.id;
   if(id==="cowform"){ e.preventDefault(); saveCow(); }
   else if(id==="cerealform"){ e.preventDefault(); saveCereal(); }
+  else if(id==="saleform"){ e.preventDefault(); recordSaleFromForm(); }
+  else if(id==="addstockform"){ e.preventDefault(); saveAddStock(); }
+  else if(id==="milkeditform"){ e.preventDefault(); saveMilkEdit(); }
+  else if(id==="roleform"){ e.preventDefault(); saveRole(); }
   else if(id==="profileform"){ e.preventDefault(); saveProfile(); }
   else if(id==="emailform"){ e.preventDefault(); changeEmail(); }
   else if(id==="passwordform"){ e.preventDefault(); changePassword(); }
