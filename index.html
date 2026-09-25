@@ -117,6 +117,25 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .perm span{color:var(--ink-soft);font-size:14px}
 .rolerow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
 .rolerow:first-child{border-top:0}
+.rolerow .rk{display:flex;align-items:center;gap:10px}
+.swatch{width:16px;height:16px;border-radius:50%;flex:none}
+.reorder{display:flex;flex-direction:column;gap:2px}
+.reorder button{width:26px;height:22px;border:1px solid var(--edge);background:var(--surface);border-radius:6px;cursor:pointer;color:var(--ink);font-size:12px;line-height:1;padding:0}
+.reorder button[disabled]{opacity:.35;cursor:not-allowed}
+.colorpick{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.colorpick label{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent;display:block}
+.colorpick input{position:absolute;opacity:0;width:1px;height:1px}
+.colorpick label:has(input:checked){border-color:var(--ink)}
+.pillstack{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.care{border-top:1px solid var(--line);padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.care:first-child{border-top:0}
+.care .cf{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;flex:1;min-width:0}
+.care .cf .f label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:2px}
+.care .cf .f input{padding:7px 8px;min-height:38px;font-size:14px;width:100%}
+.finsec{margin-bottom:30px}
+.finsec:last-child{margin-bottom:0}
+.landgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+@media (max-width:480px){.landgrid{grid-template-columns:1fr}}
 .switchrow{margin-top:20px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
 .switchrow label{display:flex;align-items:flex-start;gap:10px;font-weight:600;cursor:pointer}
 .switchrow input{margin-top:3px;accent-color:var(--green);width:18px;height:18px;flex:none}
@@ -193,8 +212,10 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
     <div class="tabs" role="tablist" aria-label="Sections" hidden>
       <button class="tab" role="tab" id="tab-log" aria-controls="view-log" aria-selected="true" data-tab="log">Milk log</button>
       <button class="tab" role="tab" id="tab-herd" aria-controls="view-herd" aria-selected="false" data-tab="herd">Herd</button>
+      <button class="tab" role="tab" id="tab-feed" aria-controls="view-feed" aria-selected="false" data-tab="feed">Feed</button>
       <button class="tab" role="tab" id="tab-daily" aria-controls="view-daily" aria-selected="false" data-tab="daily">Daily summary</button>
       <button class="tab" role="tab" id="tab-balances" aria-controls="view-balances" aria-selected="false" data-tab="balances">Balances</button>
+      <button class="tab" role="tab" id="tab-farm" aria-controls="view-farm" aria-selected="false" data-tab="farm">Farm costs</button>
       <button class="tab" role="tab" id="tab-summary" aria-controls="view-summary" aria-selected="false" data-tab="summary">Summary</button>
       <button class="tab" role="tab" id="tab-members" aria-controls="view-members" aria-selected="false" data-tab="members" hidden>Members</button>
     </div>
@@ -204,8 +225,10 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
     <section id="view-auth" hidden></section>
     <section id="view-log" role="tabpanel" aria-labelledby="tab-log" hidden></section>
     <section id="view-herd" role="tabpanel" aria-labelledby="tab-herd" hidden></section>
+    <section id="view-feed" role="tabpanel" aria-labelledby="tab-feed" hidden></section>
     <section id="view-daily" role="tabpanel" aria-labelledby="tab-daily" hidden></section>
     <section id="view-balances" role="tabpanel" aria-labelledby="tab-balances" hidden></section>
+    <section id="view-farm" role="tabpanel" aria-labelledby="tab-farm" hidden></section>
     <section id="view-summary" role="tabpanel" aria-labelledby="tab-summary" hidden></section>
     <section id="view-members" role="tabpanel" aria-labelledby="tab-members" hidden></section>
   </main>
@@ -221,8 +244,8 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
 /* =====================================================================
    1. Paste your two Supabase values here (see README.md, step 4)
    ===================================================================== */
-const SUPABASE_URL = "https://cimzgmhemqkdqqlbxakx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";
+const SUPABASE_URL = "PASTE_YOUR_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
 
 /* ---------- Settings ---------- */
 // The milk price is stored in the database and admins change it in the app
@@ -235,8 +258,11 @@ const PREG = [["unchecked","Not yet checked"],["pregnant","Confirmed pregnant"],
 const PERMS = [
   ["edit_herd","Edit the herd","Add, edit and delete cows."],
   ["manage_stock","Manage stock","Add and set stock quantities, and add, edit or delete cereals."],
-  ["remove_sales","Remove sales","Remove a wrong sale. The quantity goes back into stock."]
+  ["remove_sales","Remove sales","Remove a wrong sale. The quantity goes back into stock."],
+  ["manage_finance","Manage finance","Manage staff, casual labour, land and input costs."]
 ];
+const ROLE_COLORS = ["#2D6A4F","#7A5000","#A3352B","#1D4ED8","#7C3AED","#0891B2","#B45309","#4D7C0F"];
+const COST_CATS = [["land_preparation","Land preparation"],["seeds","Seeds"],["fertilizer","Fertilizer"],["manure","Manure"],["herbicides","Herbicides"],["other","Other"]];
 const BREEDS = ["Friesian","Ayrshire","Guernsey","Jersey","Sahiwal","Crossbreed"];
 
 /* ---------- State ---------- */
@@ -252,6 +278,8 @@ const state = {
   cows:[], cereals:[], roles:[], milk:{}, milkPrices:{}, sales:[], loadedMonths:new Set(),
   settings:{milkPrice:70,milkStock:0},
   salesDate:todayStr(), sale:{product:"milk",qty:"",time:""},
+  feed:{}, feedDraft:{}, careDate:todayStr(),
+  staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualDate:todayStr(), casualDraft:{},
   members:{list:[],allowAdminSignup:true,loaded:false,loading:false,error:""},
   tab:"log", date:todayStr(), month:todayStr().slice(0,7),
   draft:{}, saving:false, dlg:null
@@ -414,32 +442,47 @@ async function loadProfile(){
   state.user=s.data&&s.data.session?s.data.session.user:null;
   if(!state.user){ state.profile=null; state.admin=false; return; }
   let p=null;
-  try{ p=await run(sb.from("profiles").select("name,email,role,admin_until,phone,job_title,area,created_at,role_id,roles(name,permissions)").eq("id",state.user.id).maybeSingle()); }catch(e){}
+  try{ p=await run(sb.from("profiles").select("name,email,role,admin_until,phone,job_title,area,created_at,role_id,roles(name,permissions,color)").eq("id",state.user.id).maybeSingle()); }catch(e){}
   state.profile=p;
   state.admin=!!(p&&p.role==="admin"&&p.admin_until&&Date.parse(p.admin_until)>Date.now());
 }
+function staffFromRow(r){ return {id:r.id,name:r.name,wage:Number(r.wage_amount),period:r.wage_period,active:r.active}; }
+function costFromRow(r){ return {id:r.id,category:r.category,description:r.description||"",amount:Number(r.amount),date:r.cost_date}; }
+
 async function loadCore(){
   const res=await Promise.all([
     run(sb.from("cows").select("*").order("tag")),
     run(sb.from("cereals").select("*").order("name")),
     run(sb.from("farm_settings").select("*").eq("id",1).maybeSingle()),
-    run(sb.from("roles").select("*").order("name"))
+    run(sb.from("roles").select("*").order("position").order("created_at")),
+    run(sb.from("staff").select("*").order("name")),
+    run(sb.from("land_settings").select("*").eq("id",1).maybeSingle())
   ]);
   state.cows=res[0].map(cowFromRow);
   state.cereals=res[1].map(cerealFromRow);
   if(res[2]) state.settings={milkPrice:Number(res[2].milk_price_per_litre),milkStock:Number(res[2].milk_stock_litres)};
   state.roles=res[3]||[];
+  state.staff=res[4].map(staffFromRow);
+  if(res[5]) state.land={costPerAcre:Number(res[5].cost_per_acre),acresHired:Number(res[5].acres_hired)};
   await loadProfile();
 }
 async function loadMonth(m){
   const start=m+"-01", end=m+"-"+pad(daysInMonth(m));
   const res=await Promise.all([
     fetchAll((a,b)=>sb.from("milk_entries").select("cow_id,entry_date,litres,price_per_litre").gte("entry_date",start).lte("entry_date",end).order("entry_date").order("cow_id").range(a,b)),
-    fetchAll((a,b)=>sb.from("sales").select("*").gte("sold_on",start).lte("sold_on",end).order("sold_at").order("id").range(a,b))
+    fetchAll((a,b)=>sb.from("sales").select("*").gte("sold_on",start).lte("sold_on",end).order("sold_at").order("id").range(a,b)),
+    fetchAll((a,b)=>sb.from("cow_feed").select("*").gte("entry_date",start).lte("entry_date",end).order("entry_date").order("cow_id").range(a,b)),
+    fetchAll((a,b)=>sb.from("casual_labor_days").select("*").gte("work_date",start).lte("work_date",end).order("work_date").range(a,b)),
+    fetchAll((a,b)=>sb.from("farm_costs").select("*").gte("cost_date",start).lte("cost_date",end).order("cost_date").range(a,b))
   ]);
   for(const k of Object.keys(state.milk)) if(k.split("|")[1].slice(0,7)===m){ delete state.milk[k]; delete state.milkPrices[k]; }
   res[0].forEach(r=>{ const k=r.cow_id+"|"+r.entry_date; state.milk[k]=Number(r.litres); if(r.price_per_litre!=null) state.milkPrices[k]=Number(r.price_per_litre); });
   state.sales=state.sales.filter(x=>monthOf(x.d)!==m).concat(res[1].map(saleFromRow));
+  for(const k of Object.keys(state.feed)) if(k.split("|")[1].slice(0,7)===m) delete state.feed[k];
+  res[2].forEach(r=>{ state.feed[r.cow_id+"|"+r.entry_date]={silage:Number(r.silage_kg),other:Number(r.other_fodder_kg),otherType:r.other_fodder_type||"",meal:Number(r.dairy_meal_kg),supplement:Number(r.supplement_kg)}; });
+  for(const k of Object.keys(state.casual)) if(k.slice(0,7)===m) delete state.casual[k];
+  res[3].forEach(r=>{ state.casual[r.work_date]={count:r.casual_count,wage:Number(r.daily_wage)}; });
+  state.costs=state.costs.filter(x=>monthOf(x.date)!==m).concat(res[4].map(costFromRow));
   state.loadedMonths.add(m);
 }
 const loadingMonths=new Set();
@@ -480,12 +523,14 @@ let rafId=0;
 function scheduleRender(){ if(rafId) return; rafId=requestAnimationFrame(()=>{ rafId=0; renderAll(); }); }
 
 function renderWho(){
-  $("#who").innerHTML = state.auth==="in"
-    ? '<span class="role">'+(state.admin?"Admin":(roleName()||"Member"))+'</span><button class="namebtn" data-act="open-profile" title="View and edit your profile">'+esc((state.profile&&state.profile.name)||(state.user&&state.user.email)||"")+'</button><button class="btn ghost small" data-act="logout">Log out</button>'
-    : "";
+  if(state.auth!=="in"){ $("#who").innerHTML=""; return; }
+  const pr=state.profile||{}, r=pr.roles;
+  $("#who").innerHTML = pillStackHTML(r&&r.name,r&&r.color,state.admin)
+    +'<button class="namebtn" data-act="open-profile" title="View and edit your profile">'+esc(pr.name||(state.user&&state.user.email)||"")+'</button>'
+    +'<button class="btn ghost small" data-act="logout">Log out</button>';
 }
 
-const VIEWS=["log","herd","daily","balances","summary","members"];
+const VIEWS=["log","herd","feed","daily","balances","farm","summary","members"];
 function renderAll(){
   renderWho(); renderBanner();
   const inApp=state.auth==="in";
@@ -501,8 +546,10 @@ function renderAll(){
   VIEWS.forEach(t=>{ $("#view-"+t).hidden = state.tab!==t; });
   if(state.tab==="log") renderLog();
   else if(state.tab==="herd") renderHerd();
+  else if(state.tab==="feed") renderFeed();
   else if(state.tab==="daily") renderDaily();
   else if(state.tab==="balances") renderBalances();
+  else if(state.tab==="farm") renderFarm();
   else if(state.tab==="members") renderMembers();
   else renderSummary();
   if(state.dlg && ["detail","profile","member-card"].indexOf(state.dlg.mode)>=0) renderDialog();
@@ -687,6 +734,8 @@ function resetToLogin(){
   state.user=null; state.profile=null; state.admin=false; state.ready=false; state.error="";
   state.cows=[]; state.cereals=[]; state.roles=[]; state.milk={}; state.milkPrices={}; state.sales=[]; state.loadedMonths=new Set();
   state.settings={milkPrice:70,milkStock:0}; state.salesDate=todayStr(); state.sale={product:"milk",qty:"",time:""};
+  state.feed={}; state.feedDraft={}; state.careDate=todayStr();
+  state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.costs=[]; state.casual={}; state.casualDate=todayStr(); state.casualDraft={};
   state.members={list:[],allowAdminSignup:true,loaded:false,loading:false,error:""};
   state.draft={}; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
   renderAll();
@@ -830,6 +879,109 @@ function renderHerd(){
   el.innerHTML=html;
 }
 
+/* ----- Feed: fodder, dairy meal and supplements ----- */
+function feedFor(cowId,date){ return state.feed[cowId+"|"+date]||{silage:0,other:0,otherType:"",meal:0,supplement:0}; }
+function renderFeed(){
+  const el=$("#view-feed");
+  if(!state.ready){ el.innerHTML=""; return; }
+  if(!el.querySelector("#feedbody")){
+    el.innerHTML='<div class="logbar"><div><h2>Feed</h2><p class="sub">Record what each cow ate today: fodder, dairy meal and supplements.</p></div>'
+      +'<div class="field"><label for="feeddate">Date</label><input type="date" id="feeddate" max="'+todayStr()+'"></div></div><div id="feedbody"></div>';
+    $("#feeddate").value=state.careDate;
+  }
+  ensureMonth(monthOf(state.careDate));
+  renderFeedBody();
+}
+function feedValue(cowId,field){
+  const key=state.careDate+"|"+cowId+"|"+field;
+  if(key in state.feedDraft) return state.feedDraft[key];
+  const v=feedFor(cowId,state.careDate)[field];
+  return field==="otherType" ? (v||"") : (v?String(v):"");
+}
+function feedRowHTML(c){
+  const meta=[c.name?"Tag "+c.tag:"",c.breed||""].filter(Boolean).join(", ");
+  const num=(field,label,ph)=>'<div class="f"><label for="feed-'+field+'-'+esc(c.id)+'">'+label+'</label><input type="number" inputmode="decimal" min="0" step="any" placeholder="'+(ph||"0")+'" id="feed-'+field+'-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="'+field+'" value="'+esc(feedValue(c.id,field))+'"></div>';
+  return '<div class="care">'+coat(c.id,44)
+    +'<div style="min-width:120px;flex:none"><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div></div>'
+    +'<div class="cf">'+num("silage","Silage (kg)")+num("other","Other fodder (kg)")
+    +'<div class="f"><label for="feed-otherType-'+esc(c.id)+'">Other fodder type</label><input type="text" maxlength="40" placeholder="Napier grass" id="feed-otherType-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="otherType" value="'+esc(feedValue(c.id,"otherType"))+'"></div>'
+    +num("meal","Dairy meal (kg)")+num("supplement","Supplements (kg)")+'</div></div>';
+}
+function feedPending(){
+  const out=[];
+  for(const c of state.cows){
+    const key=(f)=>state.careDate+"|"+c.id+"|"+f, cur=feedFor(c.id,state.careDate);
+    const vals={};
+    let changed=false, hasVal=false;
+    ["silage","other","meal","supplement"].forEach(f=>{
+      const raw=key(f) in state.feedDraft ? state.feedDraft[key(f)] : String(cur[f]||"");
+      const n=parseFloat(raw)||0;
+      vals[f]=n; if(n>0) hasVal=true;
+      if(n!==(cur[f]||0)) changed=true;
+    });
+    const rawType=key("otherType") in state.feedDraft ? state.feedDraft[key("otherType")] : (cur.otherType||"");
+    vals.otherType=rawType.trim();
+    if(vals.otherType!==(cur.otherType||"")) changed=true;
+    if(changed&&(hasVal||cur.silage||cur.other||cur.meal||cur.supplement)) out.push({id:c.id,vals:vals});
+  }
+  return out;
+}
+function validateFeed(){
+  for(const c of state.cows){
+    const g=f=>{ const k=state.careDate+"|"+c.id+"|"+f; return k in state.feedDraft ? state.feedDraft[k] : String(feedFor(c.id,state.careDate)[f]||""); };
+    for(const f of ["silage","other","meal","supplement"]){
+      const raw=g(f); if(raw==="") continue;
+      const n=parseFloat(raw), max=(f==="silage"||f==="other")?200:50;
+      if(!isFinite(n)||n<0) return cowLabel(c)+": enter "+f+" as a number, 0 or more.";
+      if(n>max) return cowLabel(c)+": that "+f+" amount looks too high.";
+    }
+  }
+  return "";
+}
+function renderFeedBody(){
+  const body=$("#feedbody"); if(!body) return;
+  const active=document.activeElement, keepId=active&&active.dataset?active.dataset.field:null, keepCow=active&&active.dataset?active.dataset.cow:null;
+  const cows=sortedCows(state.cows);
+  let html="";
+  if(!cows.length){
+    html='<div class="ledger"><div class="empty"><p>There are no cows in the herd yet.</p></div></div>';
+  } else {
+    html='<div class="ledger">'+cows.map(feedRowHTML).join("")+'</div>';
+    let ts=0,to=0,tm=0,tp=0;
+    for(const c of cows){ const f=feedFor(c.id,state.careDate); ts+=f.silage; to+=f.other; tm+=f.meal; tp+=f.supplement; }
+    html+='<div class="total"><div><div class="eq">Total for '+esc(fmtDate(state.careDate,{weekday:"short",day:"numeric",month:"short"}))+'</div>'
+      +'<div class="eq">'+fmtL(ts)+' kg silage, '+fmtL(to)+' kg other fodder, '+fmtL(tm)+' kg dairy meal, '+fmtL(tp)+' kg supplements</div></div>'
+      +'<button class="btn" id="savefeed" data-act="save-feed">Save feed</button></div>'
+      +'<div class="error" id="feederr" role="alert" hidden></div>';
+  }
+  body.innerHTML=html;
+  updateFeedButton();
+  if(keepCow&&keepId){ const inp=document.getElementById("feed-"+keepId+"-"+keepCow); if(inp) inp.focus(); }
+}
+function updateFeedButton(){
+  const b=$("#savefeed"); if(!b) return;
+  b.disabled=state.saving||feedPending().length===0; b.textContent=state.saving?"Saving…":"Save feed";
+}
+async function saveFeed(){
+  const errEl=$("#feederr"), err=validateFeed();
+  if(err){ errEl.textContent=err; errEl.hidden=false; return; }
+  errEl.hidden=true;
+  const changes=feedPending(); if(!changes.length) return;
+  state.saving=true; updateFeedButton();
+  const date=state.careDate;
+  try{
+    const rows=changes.map(c=>({cow_id:c.id,entry_date:date,silage_kg:round2(c.vals.silage),other_fodder_kg:round2(c.vals.other),other_fodder_type:c.vals.otherType||null,dairy_meal_kg:round2(c.vals.meal),supplement_kg:round2(c.vals.supplement)}));
+    await run(sb.from("cow_feed").upsert(rows,{onConflict:"cow_id,entry_date"}));
+    changes.forEach(c=>{
+      state.feed[c.id+"|"+date]={silage:c.vals.silage,other:c.vals.other,otherType:c.vals.otherType,meal:c.vals.meal,supplement:c.vals.supplement};
+      ["silage","other","meal","supplement","otherType"].forEach(f=>{ delete state.feedDraft[date+"|"+c.id+"|"+f]; });
+    });
+    toast("Feed saved");
+  }catch(e){ toast("Couldn't save the feed. "+friendly(e),true); }
+  state.saving=false;
+  renderFeedBody();
+}
+
 /* ----- Balances ----- */
 function stockRows(){
   const rows=[{kind:"milk",id:null,name:"Milk",unit:"L",price:milkPrice(),qty:state.settings.milkStock}];
@@ -898,6 +1050,161 @@ async function saveMilkEdit(){
     if(qty!==null&&round2(qty)!==round2(state.settings.milkStock)) await run(sb.rpc("set_stock",{p_kind:"milk",p_cereal_id:null,p_qty:round2(qty)}));
     await loadCore(); closeDlg(); toast("Milk price and stock saved"); scheduleRender();
   }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,"Save"); }
+}
+
+/* ----- Farm costs: staff, casual labour, land and inputs ----- */
+function staffRowHTML(s){
+  const fin=can("manage_finance");
+  return '<div class="rolerow"><div><div class="nm">'+esc(s.name)+'</div><div class="meta">'+esc(fmtKES(s.wage)+" a "+s.period)+'</div></div>'
+    +(fin?'<div class="pactions" style="margin:0"><button class="btn ghost small" data-act="staff-edit" data-id="'+esc(s.id)+'">Edit</button><button class="btn danger small" data-act="staff-ask-delete" data-id="'+esc(s.id)+'">Remove</button></div>':"")+'</div>';
+}
+function staffFormHTML(s){
+  return '<div class="dlg"><h2 style="margin-bottom:14px">'+(s?"Edit staff member":"Add permanent staff")+'</h2><form id="staffform" novalidate><div class="stack">'
+    +'<div class="field"><label for="st-name">Name</label><input type="text" id="st-name" maxlength="60" value="'+esc(s&&s.name)+'"></div>'
+    +'<div class="grid2"><div class="field"><label for="st-wage">Wage <span class="hint">(KES)</span></label><input type="number" id="st-wage" inputmode="decimal" min="0" step="any" value="'+esc(s&&s.wage)+'"></div>'
+    +'<div class="field"><label for="st-period">Paid</label><select id="st-period"><option value="monthly"'+(!s||s.period==="monthly"?" selected":"")+'>Monthly</option><option value="daily"'+(s&&s.period==="daily"?" selected":"")+'>Daily</option></select></div></div></div>'
+    +'<div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions">'+(s?'<button type="button" class="btn danger" data-act="staff-ask-delete" data-id="'+esc(s.id)+'">Remove</button>':"")
+    +'<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Save</button></div></form></div>';
+}
+function staffConfirmHTML(s){
+  return '<div class="dlg"><h2>Remove '+esc(s.name)+'?</h2><p>This removes them from the staff list. It can\'t be undone.</p>'
+    +'<div class="error" id="delerr" role="alert" hidden></div>'
+    +'<div class="actions"><button class="btn ghost" data-act="close">Keep</button><button class="btn danger" id="delbtn" data-act="staff-delete">Remove</button></div></div>';
+}
+async function saveStaff(){
+  const g=id=>document.getElementById(id).value.trim();
+  const name=g("st-name"), wage=parseFloat(g("st-wage")), period=g("st-period");
+  const editing=state.dlg&&state.dlg.id?state.staff.find(s=>s.id===state.dlg.id):null;
+  if(name.length<2||name.length>60) return showErr("formerr","Enter the staff member's name.");
+  if(!(wage>0)) return showErr("formerr","Enter a wage above 0.");
+  document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
+  const row={name:name,wage_amount:round2(wage),wage_period:period};
+  try{
+    if(editing) needRows(await run(sb.from("staff").update(row).eq("id",editing.id).select("id")));
+    else await run(sb.from("staff").insert(row));
+    await loadCore(); closeDlg(); toast("Staff saved"); scheduleRender();
+  }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,"Save"); }
+}
+async function deleteStaff(){
+  const id=state.dlg&&state.dlg.id, btn=document.getElementById("delbtn"), errEl=document.getElementById("delerr");
+  if(!id) return;
+  btn.disabled=true; btn.textContent="Removing…"; errEl.hidden=true;
+  try{ needRows(await run(sb.from("staff").delete().eq("id",id).select("id"))); await loadCore(); closeDlg(); toast("Staff removed"); scheduleRender(); }
+  catch(e){ errEl.textContent="Couldn't remove them. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Remove"; }
+}
+
+function casualNow(){ return state.casual[state.casualDate]||{count:0,wage:0}; }
+function casualDraftVal(field){
+  const k=state.casualDate+":"+field;
+  if(k in state.casualDraft) return state.casualDraft[k];
+  const v=casualNow()[field]; return v?String(v):"";
+}
+function costFormHTML(){
+  return '<div class="dlg"><h2 style="margin-bottom:14px">Add a cost</h2><form id="costform" novalidate><div class="stack">'
+    +'<div class="field"><label for="co-cat">Category</label><select id="co-cat">'+COST_CATS.map(c=>'<option value="'+c[0]+'">'+c[1]+'</option>').join("")+'</select></div>'
+    +'<div class="field"><label for="co-desc">Description <span class="hint">(optional)</span></label><input type="text" id="co-desc" maxlength="200"></div>'
+    +'<div class="grid2"><div class="field"><label for="co-amount">Amount <span class="hint">(KES)</span></label><input type="number" id="co-amount" inputmode="decimal" min="0" step="any"></div>'
+    +'<div class="field"><label for="co-date">Date</label><input type="date" id="co-date" max="'+todayStr()+'" value="'+todayStr()+'"></div></div></div>'
+    +'<div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Add cost</button></div></form></div>';
+}
+async function saveCost(){
+  const g=id=>document.getElementById(id).value.trim();
+  const cat=g("co-cat"), desc=g("co-desc"), amount=parseFloat(g("co-amount")), date=g("co-date");
+  if(!(amount>0)) return showErr("formerr","Enter an amount above 0.");
+  if(!date||date>todayStr()) return showErr("formerr","Enter a valid date, not in the future.");
+  document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
+  try{
+    await run(sb.from("farm_costs").insert({category:cat,description:desc||null,amount:round2(amount),cost_date:date}));
+    await loadMonth(monthOf(date)); closeDlg(); toast("Cost added"); scheduleRender();
+  }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,"Add cost"); }
+}
+async function deleteCost(id){
+  try{ needRows(await run(sb.from("farm_costs").delete().eq("id",id).select("id"))); await Promise.all(Array.from(state.loadedMonths).map(loadMonth)); toast("Cost removed"); }
+  catch(e){ toast("Couldn't remove the cost. "+friendly(e),true); }
+  scheduleRender();
+}
+async function saveCasual(){
+  const errEl=$("#casualerr"), count=parseInt(casualDraftVal("count"),10), wage=parseFloat(casualDraftVal("wage"));
+  if(!(count>=0&&count<=500)){ errEl.textContent="Enter the number of casual workers, 0 or more."; errEl.hidden=false; return; }
+  if(!(wage>=0)){ errEl.textContent="Enter the daily wage per casual, 0 or more."; errEl.hidden=false; return; }
+  errEl.hidden=true; formBusyId("savecasual",true,"Saving…");
+  try{
+    await run(sb.from("casual_labor_days").upsert({work_date:state.casualDate,casual_count:count,daily_wage:round2(wage)},{onConflict:"work_date"}));
+    state.casual[state.casualDate]={count:count,wage:round2(wage)};
+    delete state.casualDraft[state.casualDate+":count"]; delete state.casualDraft[state.casualDate+":wage"];
+    toast("Casual labour saved");
+  }catch(e){ toast("Couldn't save. "+friendly(e),true); }
+  formBusyId("savecasual",false,"Save"); renderFarm();
+}
+function formBusyId(id,on,label){ const b=document.getElementById(id); if(b){ b.disabled=on; b.textContent=label; } }
+
+async function saveLand(){
+  const cpa=parseFloat(document.getElementById("land-cpa").value), acres=parseFloat(document.getElementById("land-acres").value);
+  const errEl=$("#landerr");
+  if(!(cpa>=0)){ errEl.textContent="Enter the cost per acre, 0 or more."; errEl.hidden=false; return; }
+  if(!(acres>=0)){ errEl.textContent="Enter the acres hired, 0 or more."; errEl.hidden=false; return; }
+  errEl.hidden=true; formBusyId("saveland",true,"Saving…");
+  try{
+    await run(sb.from("land_settings").update({cost_per_acre:round2(cpa),acres_hired:round2(acres)}).eq("id",1));
+    state.land={costPerAcre:round2(cpa),acresHired:round2(acres)};
+    toast("Land details saved");
+  }catch(e){ toast("Couldn't save. "+friendly(e),true); }
+  formBusyId("saveland",false,"Save"); renderFarm();
+}
+
+function renderFarm(){
+  const el=$("#view-farm");
+  if(!state.ready){ el.innerHTML=""; return; }
+  ensureMonth(monthOf(state.casualDate));
+  const fin=can("manage_finance");
+  let html='<h2>Farm costs</h2><p class="sub" style="margin:4px 0 20px">Staff, casual labour, land and input costs. '+(fin?"":"Admins keep this up to date.")+'</p>';
+
+  html+='<div class="finsec"><h3 class="sec" style="margin-top:0">Permanent staff</h3>'
+    +(state.staff.length?'<div class="ledger">'+state.staff.map(staffRowHTML).join("")+'</div>':'<div class="ledger"><div class="empty"><p>No permanent staff added yet.</p></div></div>')
+    +(fin?'<p style="margin-top:10px"><button class="btn ghost small" data-act="staff-add">Add staff</button></p>':"")+'</div>';
+
+  html+='<div class="finsec"><h3 class="sec">Casual labourers</h3><div class="logbar" style="margin-bottom:10px"><p class="sub" style="margin:0">Number of casuals and their daily wage.</p>'
+    +'<div class="field"><label for="casualdate">Date</label><input type="date" id="casualdate" max="'+todayStr()+'" value="'+state.casualDate+'"></div></div>';
+  if(fin){
+    const c=casualNow(), total=(parseFloat(casualDraftVal("count"))||0)*(parseFloat(casualDraftVal("wage"))||0);
+    html+='<div class="grid2" style="margin-bottom:8px"><div class="field"><label for="casual-count">Number of casuals</label><input type="number" id="casual-count" inputmode="numeric" min="0" step="1" value="'+esc(casualDraftVal("count"))+'"></div>'
+      +'<div class="field"><label for="casual-wage">Daily wage per casual <span class="hint">(KES)</span></label><input type="number" id="casual-wage" inputmode="decimal" min="0" step="any" value="'+esc(casualDraftVal("wage"))+'"></div></div>'
+      +'<p class="sub" id="casualtotal">'+(total>0?"Total for the day: "+fmtKES(total):"")+'</p>'
+      +'<div class="error" id="casualerr" role="alert" hidden></div><button class="btn" id="savecasual" data-act="save-casual">Save</button>';
+  }
+  const days=Object.keys(state.casual).filter(d=>monthOf(d)===monthOf(state.casualDate)).sort().reverse();
+  if(days.length){
+    html+='<div class="scroll" style="margin-top:16px"><table><thead><tr><th>Date</th><th>Casuals</th><th>Wage each</th><th>Total</th></tr></thead><tbody>'
+      +days.map(d=>{ const c=state.casual[d]; return '<tr><td>'+esc(fmtDate(d,{day:"numeric",month:"short"}))+'</td><td>'+c.count+'</td><td>'+fmtKES(c.wage)+'</td><td>'+fmtKES(c.count*c.wage)+'</td></tr>'; }).join("")
+      +'</tbody></table></div>';
+  }
+  html+='</div>';
+
+  html+='<div class="finsec"><h3 class="sec">Land</h3><div class="landgrid">';
+  if(fin){
+    html+='<div class="field"><label for="land-cpa">Cost of land hire per acre <span class="hint">(KES)</span></label><input type="number" id="land-cpa" inputmode="decimal" min="0" step="any" value="'+esc(state.land.costPerAcre)+'"></div>'
+      +'<div class="field"><label for="land-acres">Total acres hired</label><input type="number" id="land-acres" inputmode="decimal" min="0" step="any" value="'+esc(state.land.acresHired)+'"></div>'
+      +'<div class="field full" style="grid-column:1/-1"><div class="error" id="landerr" role="alert" hidden></div><button class="btn" id="saveland" data-act="save-land">Save land details</button></div>';
+  } else {
+    html+='<div><div class="meta">Cost per acre</div><div class="nm">'+fmtKES(state.land.costPerAcre)+'</div></div><div><div class="meta">Acres hired</div><div class="nm">'+fmtL(state.land.acresHired)+'</div></div>';
+  }
+  html+='</div><p class="sumline">Total land cost: <b>'+fmtKES(state.land.costPerAcre*state.land.acresHired)+'</b></p></div>';
+
+  html+='<div class="finsec"><div class="logbar"><div><h3 class="sec" style="margin:0">Land preparation and inputs</h3><p class="sub">Seeds, fertilizer, manure and herbicides.</p></div>'
+    +(fin?'<button class="btn" data-act="cost-add">Add cost</button>':"")+'</div>';
+  const costs=state.costs.slice().sort((a,b)=>b.date<a.date?-1:b.date>a.date?1:0);
+  if(!costs.length){
+    html+='<div class="ledger"><div class="empty"><p>No costs recorded yet.</p></div></div>';
+  } else {
+    let total=0; costs.forEach(c=>total+=c.amount);
+    html+='<div class="scroll"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th>'+(fin?"<th></th>":"")+'</tr></thead><tbody>'
+      +costs.map(c=>'<tr><td>'+esc(fmtDate(c.date,{day:"numeric",month:"short"}))+'</td><td>'+esc(label(COST_CATS,c.category))+'</td><td>'+esc(c.description||"—")+'</td><td>'+fmtKES(c.amount)+'</td>'+(fin?'<td><button class="btn ghost small" data-act="cost-delete" data-id="'+esc(c.id)+'">Remove</button></td>':"")+'</tr>').join("")
+      +'</tbody><tfoot><tr><td colspan="3">Total (loaded months)</td><td>'+fmtKES(total)+'</td>'+(fin?"<td></td>":"")+'</tr></tfoot></table></div>';
+  }
+  html+='</div>';
+  el.innerHTML=html;
 }
 
 /* ----- Daily summary ----- */
@@ -1012,20 +1319,29 @@ async function loadMembers(){
   scheduleRender();
 }
 function initial(name){ return esc(String(name||"?").trim().charAt(0).toUpperCase()||"?"); }
+function rolePillHTML(name,color){ return '<span class="pill" style="background:'+color+'22;color:'+color+'">'+esc(name)+'</span>'; }
+// Stacked pills, highest (a custom, assigned role) above the default Admin/Normal user pill
+function pillStackHTML(roleName,roleColor,isAdmin){
+  return '<span class="pillstack">'+(roleName?rolePillHTML(roleName,roleColor||"#2D6A4F"):"")
+    +'<span class="pill '+(isAdmin?"admin":"")+'">'+(isAdmin?"Admin":"Normal user")+'</span></span>';
+}
 function memberRowHTML(m){
   const isAdmin=m.role==="admin", name=m.name||m.email||"Unnamed";
   const joined=m.created_at?fmtDate(fmtISO(new Date(m.created_at))):"";
   return '<button class="cow" data-act="open-member" data-id="'+esc(m.id)+'"><div class="chip" aria-hidden="true">'+initial(name)+'</div>'
     +'<div><div class="nm">'+esc(name)+(m.is_me?" (you)":"")+'</div>'
     +'<div class="meta">'+esc((m.email||"")+(joined?(m.email?", ":"")+"joined "+joined:""))+'</div></div>'
-    +'<div class="tags"><span class="pill '+(isAdmin?"admin":"")+'">'+(isAdmin?"Admin":"Normal user")+'</span>'+(m.role_name?'<span class="pill">'+esc(m.role_name)+'</span>':"")+'</div></button>';
+    +'<div class="tags">'+pillStackHTML(m.role_name,m.role_color,isAdmin)+'</div></button>';
 }
 function rolesHTML(members){
   if(!state.roles.length) return '<div class="ledger"><div class="empty"><p>No extra roles yet. Create one to give some members more to do.</p></div></div>';
-  return '<div class="ledger">'+state.roles.map(r=>{
+  const roles=state.roles.slice().sort((a,b)=>a.position-b.position);
+  return '<div class="ledger">'+roles.map((r,i)=>{
     const n=members.filter(m=>m.role_id===r.id).length;
     const perms=(r.permissions||[]).map(k=>{ const p=PERMS.find(x=>x[0]===k); return p?p[1]:k; }).join(", ")||"No extra permissions";
-    return '<div class="rolerow"><div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+(r.description?esc(r.description)+". ":"")+esc(perms)+", "+n+(n===1?" member":" members")+'</div></div>'
+    return '<div class="rolerow"><div class="rk"><div class="reorder"><button data-act="role-up" data-id="'+esc(r.id)+'" aria-label="Move '+esc(r.name)+' up"'+(i===0?" disabled":"")+'>▲</button><button data-act="role-down" data-id="'+esc(r.id)+'" aria-label="Move '+esc(r.name)+' down"'+(i===roles.length-1?" disabled":"")+'>▼</button></div>'
+      +'<span class="swatch" style="background:'+esc(r.color)+'" aria-hidden="true"></span>'
+      +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+(r.description?esc(r.description)+". ":"")+esc(perms)+", "+n+(n===1?" member":" members")+'</div></div></div>'
       +'<div class="pactions" style="margin:0"><button class="btn ghost small" data-act="role-edit" data-id="'+esc(r.id)+'">Edit</button><button class="btn danger small" data-act="role-ask-delete" data-id="'+esc(r.id)+'">Delete</button></div></div>';
   }).join("")+'</div>';
 }
@@ -1064,10 +1380,13 @@ async function assignRole(userId,roleId){
   loadMembers();
 }
 function roleFormHTML(r){
-  const have=(r&&r.permissions)||[];
+  const have=(r&&r.permissions)||[], color=(r&&r.color)||ROLE_COLORS[state.roles.length%ROLE_COLORS.length];
   return '<div class="dlg"><h2 style="margin-bottom:6px">'+(r?"Edit role":"Create a role")+'</h2><p class="sub" style="margin-bottom:14px">Everyone can already view, record milk and record sales. Tick anything extra this role can do.</p>'
     +'<form id="roleform" novalidate><div class="stack"><div class="field"><label for="r-name">Role name</label><input type="text" id="r-name" maxlength="40" placeholder="Storekeeper" value="'+esc(r&&r.name)+'"></div>'
     +'<div class="field"><label for="r-desc">Description <span class="hint">(optional)</span></label><input type="text" id="r-desc" maxlength="200" value="'+esc(r&&r.description)+'"></div>'
+    +'<fieldset><legend>Colour</legend><div class="colorpick">'
+    +ROLE_COLORS.map(c=>'<label style="background:'+c+'"><input type="radio" name="rcolor" value="'+c+'"'+(c===color?" checked":"")+'></label>').join("")
+    +'</div></fieldset>'
     +'<fieldset><legend>Extra permissions</legend><div class="permlist">'
     +PERMS.map(pm=>'<label class="perm"><input type="checkbox" name="perm" value="'+pm[0]+'"'+(have.indexOf(pm[0])>=0?" checked":"")+'><div><b>'+esc(pm[1])+'</b><span>'+esc(pm[2])+'</span></div></label>').join("")
     +'</div></fieldset></div><div class="error" id="formerr" role="alert" hidden></div>'
@@ -1081,12 +1400,14 @@ function roleConfirmHTML(r){
 async function saveRole(){
   const g=id=>document.getElementById(id).value.trim();
   const name=g("r-name"), desc=g("r-desc"), perms=Array.prototype.map.call(document.querySelectorAll("#roleform input[name=perm]:checked"),x=>x.value);
+  const colorEl=document.querySelector('#roleform input[name=rcolor]:checked'), color=colorEl?colorEl.value:ROLE_COLORS[0];
   const editing=state.dlg&&state.dlg.id?state.roles.find(r=>r.id===state.dlg.id):null;
   if(name.length<2||name.length>40) return showErr("formerr","Enter a role name of 2 to 40 characters.");
   if(["admin","normal user","member"].indexOf(name.toLowerCase())>=0) return showErr("formerr","Choose a different name. \""+name+"\" is already used by the system.");
   if(state.roles.find(r=>r.id!==(editing&&editing.id)&&r.name.toLowerCase()===name.toLowerCase())) return showErr("formerr","There is already a role called "+name+".");
   document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
-  const row={name:name,description:desc||null,permissions:perms};
+  const row={name:name,description:desc||null,permissions:perms,color:color};
+  if(!editing) row.position=(Math.max(0,...state.roles.map(r=>r.position))||0)+1;
   try{
     if(editing) needRows(await run(sb.from("roles").update(row).eq("id",editing.id).select("id")));
     else await run(sb.from("roles").insert(row));
@@ -1101,6 +1422,16 @@ async function deleteRole(){
     needRows(await run(sb.from("roles").delete().eq("id",id).select("id")));
     await loadCore(); closeDlg(); toast("Role deleted"); loadMembers(); scheduleRender();
   }catch(e){ errEl.textContent="Couldn't delete the role. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Delete role"; }
+}
+async function moveRole(id,dir){
+  const roles=state.roles.slice().sort((a,b)=>a.position-b.position), i=roles.findIndex(r=>r.id===id);
+  const j=i+dir; if(i<0||j<0||j>=roles.length) return;
+  const a=roles[i], b=roles[j];
+  try{
+    await run(sb.from("roles").update({position:b.position}).eq("id",a.id));
+    await run(sb.from("roles").update({position:a.position}).eq("id",b.id));
+    await loadCore(); loadMembers(); scheduleRender();
+  }catch(e){ toast("Couldn't reorder roles. "+friendly(e),true); }
 }
 async function setAdminSignup(on){
   try{ await run(sb.rpc("set_admin_signup",{p_allow:on})); toast(on?"New sign-ups can become admins":"New sign-ups can no longer become admins"); }
@@ -1177,6 +1508,8 @@ function openStockAdd(kind,id){ state.dlg={mode:"stock-add",kind:kind,id:id||nul
 function openMilkEdit(){ state.dlg={mode:"milk-edit"}; renderDialog(); openDlg(); const f=document.getElementById("m-price")||document.getElementById("m-qty"); if(f) f.focus(); }
 function openRoleForm(id){ state.dlg={mode:"role-form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("r-name"); if(f) f.focus(); }
 function openCerealForm(id){ state.dlg={mode:"cereal-form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("c-name"); if(f) f.focus(); }
+function openStaffForm(id){ state.dlg={mode:"staff-form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("st-name"); if(f) f.focus(); }
+function openCostForm(){ state.dlg={mode:"cost-form"}; renderDialog(); openDlg(); const f=document.getElementById("co-amount"); if(f) f.focus(); }
 
 function renderDialog(){
   const d=$("#dlg"), s=state.dlg; if(!s) return;
@@ -1186,6 +1519,9 @@ function renderDialog(){
   if(s.mode==="milk-edit"){ d.innerHTML=milkEditHTML(); return; }
   if(s.mode==="role-form"){ d.innerHTML=roleFormHTML(s.id?state.roles.find(r=>r.id===s.id):null); return; }
   if(s.mode==="role-confirm"){ const r=state.roles.find(x=>x.id===s.id); if(!r){ closeDlg(); return; } d.innerHTML=roleConfirmHTML(r); return; }
+  if(s.mode==="staff-form"){ d.innerHTML=staffFormHTML(s.id?state.staff.find(x=>x.id===s.id):null); return; }
+  if(s.mode==="staff-confirm"){ const st=state.staff.find(x=>x.id===s.id); if(!st){ closeDlg(); return; } d.innerHTML=staffConfirmHTML(st); return; }
+  if(s.mode==="cost-form"){ d.innerHTML=costFormHTML(); return; }
   if(s.mode==="profile"){ d.innerHTML=ownCardHTML(s.note); return; }
   if(s.mode==="profile-edit"){ d.innerHTML=profileFormHTML(); return; }
   if(s.mode==="profile-email"){ d.innerHTML=emailFormHTML(); return; }
@@ -1270,13 +1606,14 @@ function cardHTML(p,actions,note,extra){
   const none='<span class="none">Not added</span>', val=v=>v?esc(v):none;
   const joined=p.created_at?esc(fmtDate(fmtISO(new Date(p.created_at)))):none;
   return '<div class="dlg">'+(note?'<div class="note" role="status">'+esc(note)+'</div>':"")
-    +'<div class="dhead"><div class="chip big" aria-hidden="true">'+initial(name)+'</div><div><h2>'+esc(name)+'</h2><span class="pill '+(isAdmin?"admin":"")+'">'+(isAdmin?"Admin":"Normal user")+'</span></div></div>'
+    +'<div class="dhead"><div class="chip big" aria-hidden="true">'+initial(name)+'</div><div><h2>'+esc(name)+'</h2>'+pillStackHTML(p.role_name,p.role_color,isAdmin)+'</div></div>'
     +'<dl class="facts"><dt>Email</dt><dd>'+val(p.email)+'</dd><dt>Phone</dt><dd>'+val(p.phone)+'</dd><dt>Extra role</dt><dd>'+val(p.role_name)+'</dd><dt>Job on the farm</dt><dd>'+val(p.job_title)+'</dd><dt>Town or area</dt><dd>'+val(p.area)+'</dd><dt>Member since</dt><dd>'+joined+'</dd></dl>'
     +(extra||"")+'<div class="actions">'+actions+'</div></div>';
 }
 function me(){
   const pr=state.profile||{};
-  return {name:pr.name,email:(state.user&&state.user.email)||pr.email,role:pr.role||"user",phone:pr.phone,job_title:pr.job_title,area:pr.area,created_at:pr.created_at,role_name:roleName()};
+  const r=pr.roles;
+  return {name:pr.name,email:(state.user&&state.user.email)||pr.email,role:pr.role||"user",phone:pr.phone,job_title:pr.job_title,area:pr.area,created_at:pr.created_at,role_name:r&&r.name,role_color:r&&r.color};
 }
 function ownCardHTML(note){
   return cardHTML(me(),'<button class="btn ghost" data-act="change-password">Change password</button><button class="btn ghost" data-act="change-email">Change email</button><button class="btn" data-act="edit-profile">Edit details</button><button class="btn ghost" data-act="close">Close</button>',note);
@@ -1514,14 +1851,25 @@ document.addEventListener("click",e=>{
     case "role-edit": openRoleForm(a.dataset.id); break;
     case "role-ask-delete": state.dlg={mode:"role-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
     case "role-delete": deleteRole(); break;
+    case "role-up": moveRole(a.dataset.id,-1); break;
+    case "role-down": moveRole(a.dataset.id,1); break;
     case "remove-sale": removeSale(a.dataset.id); break;
+    case "save-feed": saveFeed(); break;
+    case "staff-add": openStaffForm(null); break;
+    case "staff-edit": openStaffForm(a.dataset.id); break;
+    case "staff-ask-delete": state.dlg={mode:"staff-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
+    case "staff-delete": deleteStaff(); break;
+    case "cost-add": openCostForm(); break;
+    case "cost-delete": deleteCost(a.dataset.id); break;
+    case "save-casual": saveCasual(); break;
+    case "save-land": saveLand(); break;
     case "prev-month": state.month=shiftMonth(state.month,-1); renderSummary(); break;
     case "next-month": state.month=shiftMonth(state.month,1); renderSummary(); break;
   }
 });
 document.addEventListener("input",e=>{
   const t=e.target; if(!t.closest) return;
-  const inp=t.closest("input[data-cow]");
+  const inp=t.closest("#logbody input[data-cow]");
   if(inp){
     state.draft[state.date+"|"+inp.dataset.cow]=inp.value;
     const n=parseFloat(inp.value), k=document.querySelector('[data-kes="'+CSS.escape(inp.dataset.cow)+'"]');
@@ -1535,7 +1883,19 @@ document.addEventListener("input",e=>{
     else if(t.id==="s-time") state.sale.time=t.value;
     else if(t.id==="s-product") state.sale.product=t.value;
     const er=$("#saleerr"); if(er) er.hidden=true;
-    updateSaleInfo();
+    updateSaleInfo(); return;
+  }
+  const fi=t.closest("input[data-field]");
+  if(fi){
+    state.feedDraft[state.careDate+"|"+fi.dataset.cow+"|"+fi.dataset.field]=fi.value;
+    const er=$("#feederr"); if(er) er.hidden=true;
+    updateFeedButton(); return;
+  }
+  if(t.id==="casual-count"||t.id==="casual-wage"){
+    state.casualDraft[state.casualDate+":"+(t.id==="casual-count"?"count":"wage")]=t.value;
+    const n=(parseFloat(casualDraftVal("count"))||0)*(parseFloat(casualDraftVal("wage"))||0), tot=$("#casualtotal");
+    if(tot) tot.textContent = n>0 ? "Total for the day: "+fmtKES(n) : "";
+    const er=$("#casualerr"); if(er) er.hidden=true; return;
   }
 });
 document.addEventListener("change",e=>{
@@ -1554,6 +1914,16 @@ document.addEventListener("change",e=>{
     state.salesDate=t.value>todayStr()?todayStr():t.value; t.value=state.salesDate;
     ensureMonth(monthOf(state.salesDate)); refreshSaleForm(); renderDailyBody(); return;
   }
+  if(t.id==="feeddate"){
+    if(!t.value){ t.value=state.careDate; return; }
+    state.careDate=t.value>todayStr()?todayStr():t.value; t.value=state.careDate;
+    ensureMonth(monthOf(state.careDate)); renderFeedBody(); return;
+  }
+  if(t.id==="casualdate"){
+    if(!t.value){ t.value=state.casualDate; return; }
+    state.casualDate=t.value>todayStr()?todayStr():t.value; t.value=state.casualDate;
+    ensureMonth(monthOf(state.casualDate)); renderFarm(); return;
+  }
   if(t.id!=="logdate") return;
   const v=t.value;
   if(!v){ t.value=state.date; return; }
@@ -1562,7 +1932,7 @@ document.addEventListener("change",e=>{
   renderLogBody();
 });
 document.addEventListener("keydown",e=>{
-  if(e.key==="Enter"&&e.target.matches&&e.target.matches("input[data-cow]")){
+  if(e.key==="Enter"&&e.target.matches&&e.target.matches("#logbody input[data-cow]")){
     e.preventDefault();
     const all=Array.from(document.querySelectorAll("#logbody input[data-cow]")).filter(x=>!x.disabled), i=all.indexOf(e.target);
     if(i>=0&&i<all.length-1) all[i+1].focus(); else e.target.blur();
@@ -1576,6 +1946,8 @@ document.addEventListener("submit",e=>{
   else if(id==="addstockform"){ e.preventDefault(); saveAddStock(); }
   else if(id==="milkeditform"){ e.preventDefault(); saveMilkEdit(); }
   else if(id==="roleform"){ e.preventDefault(); saveRole(); }
+  else if(id==="staffform"){ e.preventDefault(); saveStaff(); }
+  else if(id==="costform"){ e.preventDefault(); saveCost(); }
   else if(id==="profileform"){ e.preventDefault(); saveProfile(); }
   else if(id==="emailform"){ e.preventDefault(); changeEmail(); }
   else if(id==="passwordform"){ e.preventDefault(); changePassword(); }
