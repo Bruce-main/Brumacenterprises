@@ -45,6 +45,8 @@ legend{font-size:14px;font-weight:600;padding:0;margin-bottom:4px}
 .uname{font-weight:600}
 .role{display:inline-block;padding:3px 11px;border-radius:999px;background:var(--green-tint);color:var(--green);font-weight:600;font-size:14px}
 .tabs{display:flex;gap:4px;margin-top:18px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs.sub{margin-top:10px;font-size:15px}
+.tabs.sub .tab{padding:8px 12px;min-height:40px}
 .tab{background:none;border:0;padding:10px 14px;font-weight:600;color:var(--ink-soft);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;min-height:44px;white-space:nowrap;border-radius:6px 6px 0 0;transition:color .15s ease,background-color .15s ease,border-color .15s ease}
 .tab:hover{color:var(--ink);background:var(--surface-2)}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--green)}
@@ -226,28 +228,25 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
       <h1 class="brand" id="farmname">Brumac Enterprises</h1>
       <div class="who" id="who"></div>
     </div>
-    <div class="tabs" role="tablist" aria-label="Sections" hidden>
-      <button class="tab" role="tab" id="tab-log" aria-controls="view-log" aria-selected="true" data-tab="log">Milk log</button>
-      <button class="tab" role="tab" id="tab-herd" aria-controls="view-herd" aria-selected="false" data-tab="herd">Herd</button>
-      <button class="tab" role="tab" id="tab-feed" aria-controls="view-feed" aria-selected="false" data-tab="feed">Feed</button>
-      <button class="tab" role="tab" id="tab-daily" aria-controls="view-daily" aria-selected="false" data-tab="daily">Daily summary</button>
-      <button class="tab" role="tab" id="tab-balances" aria-controls="view-balances" aria-selected="false" data-tab="balances">Balances</button>
-      <button class="tab" role="tab" id="tab-farm" aria-controls="view-farm" aria-selected="false" data-tab="farm">Farm costs</button>
-      <button class="tab" role="tab" id="tab-summary" aria-controls="view-summary" aria-selected="false" data-tab="summary">Summary</button>
-      <button class="tab" role="tab" id="tab-members" aria-controls="view-members" aria-selected="false" data-tab="members" hidden>Members</button>
+    <div class="tabs" role="tablist" aria-label="Main sections" hidden>
+      <button class="tab" role="tab" id="sec-farm" aria-selected="true" data-section="farm">Farm</button>
+      <button class="tab" role="tab" id="sec-shop" aria-selected="false" data-section="shop">Shop</button>
+      <button class="tab" role="tab" id="sec-summary" aria-selected="false" data-section="summary">Summary</button>
+      <button class="tab" role="tab" id="sec-members" aria-selected="false" data-section="members" hidden>Members</button>
     </div>
+    <div class="tabs sub" role="tablist" aria-label="Section pages" id="subtabs" hidden></div>
   </header>
   <main>
     <div id="banner"></div>
     <section id="view-auth" hidden></section>
-    <section id="view-log" role="tabpanel" aria-labelledby="tab-log" hidden></section>
-    <section id="view-herd" role="tabpanel" aria-labelledby="tab-herd" hidden></section>
-    <section id="view-feed" role="tabpanel" aria-labelledby="tab-feed" hidden></section>
-    <section id="view-daily" role="tabpanel" aria-labelledby="tab-daily" hidden></section>
-    <section id="view-balances" role="tabpanel" aria-labelledby="tab-balances" hidden></section>
-    <section id="view-farm" role="tabpanel" aria-labelledby="tab-farm" hidden></section>
-    <section id="view-summary" role="tabpanel" aria-labelledby="tab-summary" hidden></section>
-    <section id="view-members" role="tabpanel" aria-labelledby="tab-members" hidden></section>
+    <section id="view-log" role="tabpanel" hidden></section>
+    <section id="view-herd" role="tabpanel" hidden></section>
+    <section id="view-feed" role="tabpanel" hidden></section>
+    <section id="view-daily" role="tabpanel" hidden></section>
+    <section id="view-balances" role="tabpanel" hidden></section>
+    <section id="view-farm" role="tabpanel" hidden></section>
+    <section id="view-summary" role="tabpanel" hidden></section>
+    <section id="view-members" role="tabpanel" hidden></section>
   </main>
 </div>
 <dialog id="dlg" aria-label="Details"></dialog>
@@ -274,7 +273,7 @@ const STATUSES = [["milking","Milking"],["dry","Dry"],["heifer","Heifer"],["sold
 const PREG = [["unchecked","Not yet checked"],["pregnant","Confirmed pregnant"],["open","Not pregnant"]];
 const PERMS = [
   ["edit_herd","Edit the herd","Add, edit and delete cows."],
-  ["manage_stock","Manage stock","Add and set stock quantities, and add, edit or delete cereals."],
+  ["manage_stock","Manage stock","Add and set stock quantities, and add, edit or delete shop products."],
   ["remove_sales","Remove sales","Remove a wrong sale. The quantity goes back into stock."],
   ["manage_finance","Manage finance","Manage staff, casual labour, land and input costs."]
 ];
@@ -298,7 +297,7 @@ const state = {
   feed:{}, feedDraft:{}, careDate:todayStr(),
   staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualDate:todayStr(), casualDraft:{},
   members:{list:[],allowAdminSignup:true,loaded:false,loading:false,error:""},
-  tab:"log", date:todayStr(), month:todayStr().slice(0,7),
+  section:"farm", tab:"log", date:todayStr(), month:todayStr().slice(0,7),
   draft:{}, saving:false, dlg:null
 };
 
@@ -395,7 +394,7 @@ function cowToRow(f){
     last_calving:f.lastCalving||null,insemination:f.insemination||null,bull:f.bull||null,pregnancy:f.pregnancy,
     weight_kg:f.weight!==""?parseFloat(f.weight):null,health:f.health||null,notes:f.notes||null};
 }
-function cerealFromRow(r){ return {id:r.id,name:r.name,price:Number(r.price_per_kg),qty:Number(r.qty_kg)}; }
+function cerealFromRow(r){ return {id:r.id,name:r.name,unit:r.unit||"kg",price:Number(r.price_per_kg),qty:Number(r.qty_kg)}; }
 function saleFromRow(r){ return {id:r.id,kind:r.product_kind,cerealId:r.cereal_id,qty:Number(r.quantity),p:Number(r.price_per_unit),d:r.sold_on,ts:Date.parse(r.sold_at)||0}; }
 function fmtClock(ts){ const d=new Date(ts); return pad(d.getHours())+":"+pad(d.getMinutes()); }
 
@@ -566,6 +565,13 @@ function renderWho(){
 }
 
 const VIEWS=["log","herd","feed","daily","balances","farm","summary","members"];
+// Which page each section shows, and the label each tab takes in that section
+// (the "daily" and "balances" pages are shared, filtered to that section's products)
+const SECTION_TABS={
+  farm:[["log","Milk log"],["herd","Herd"],["feed","Feed"],["daily","Milk sales"],["balances","Milk balance"],["farm","Farm costs"]],
+  shop:[["balances","Products"],["daily","Sales"]]
+};
+function sectionOf(tab){ return tab==="summary"?"summary":tab==="members"?"members":state.section; }
 function renderAll(){
   renderWho(); renderBanner();
   const inApp=state.auth==="in";
@@ -573,11 +579,23 @@ function renderAll(){
   $("#view-auth").hidden=inApp;
   if(!inApp){
     VIEWS.forEach(t=>{ $("#view-"+t).hidden=true; });
+    $("#subtabs").hidden=true;
     renderAuth(); return;
   }
-  $("#tab-members").hidden=!state.admin;
-  if(state.tab==="members"&&!state.admin) state.tab="log";
-  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===state.tab)));
+  $("#sec-members").hidden=!state.admin;
+  if(state.section==="members"&&!state.admin) state.section="farm";
+  document.querySelectorAll('.tabs:not(.sub) > .tab').forEach(b=>b.setAttribute("aria-selected",String(b.dataset.section===state.section)));
+
+  const subEl=$("#subtabs"), tabs=SECTION_TABS[state.section];
+  if(tabs){
+    if(!tabs.some(t=>t[0]===state.tab)) state.tab=tabs[0][0];
+    subEl.hidden=false;
+    subEl.innerHTML=tabs.map(t=>'<button class="tab" role="tab" aria-selected="'+(t[0]===state.tab)+'" data-tab="'+t[0]+'">'+esc(t[1])+'</button>').join("");
+  } else {
+    subEl.hidden=true; subEl.innerHTML="";
+    state.tab=state.section; // summary / members: the page IS the section
+  }
+
   VIEWS.forEach(t=>{ $("#view-"+t).hidden = state.tab!==t; });
   if(state.tab==="log") renderLog();
   else if(state.tab==="herd") renderHerd();
@@ -752,7 +770,7 @@ async function doRecovery(){
 async function enterApp(){
   state.error=""; state.ready=false; state.members.loaded=false;
   await loadProfile();
-  state.auth="in"; state.tab="log"; state.authNote="";
+  state.auth="in"; state.section="farm"; state.tab="log"; state.authNote="";
   renderAll();
   const cur=todayStr().slice(0,7);
   try{
@@ -772,7 +790,7 @@ function resetToLogin(){
   state.feed={}; state.feedDraft={}; state.careDate=todayStr();
   state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.costs=[]; state.casual={}; state.casualDate=todayStr(); state.casualDraft={};
   state.members={list:[],allowAdminSignup:true,loaded:false,loading:false,error:""};
-  state.draft={}; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
+  state.draft={}; state.section="farm"; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
   renderAll();
 }
 async function logout(){
@@ -1018,27 +1036,41 @@ async function saveFeed(){
 }
 
 /* ----- Balances ----- */
-function stockRows(){
+const UNIT_WORD={kg:"kg",litre:"litre",piece:"piece",bag:"bag",bunch:"bunch",packet:"packet",L:"litre"};
+function unitWord(u){ return UNIT_WORD[u]||u; }
+function allStockRows(){
   const rows=[{kind:"milk",id:null,name:"Milk",unit:"L",price:milkPrice(),qty:state.settings.milkStock}];
-  sortedCereals().forEach(c=>rows.push({kind:"cereal",id:c.id,name:c.name,unit:"kg",price:c.price,qty:c.qty}));
+  sortedCereals().forEach(c=>rows.push({kind:"cereal",id:c.id,name:c.name,unit:c.unit,price:c.price,qty:c.qty}));
   return rows;
 }
-function findStock(kind,id){ return stockRows().find(r=>r.kind===kind&&(r.id||"")===(id||"")); }
+// Farm's balance page shows only milk; Shop's shows only shop products
+function stockRows(){
+  return allStockRows().filter(r=>state.section==="farm"?r.kind==="milk":r.kind!=="milk");
+}
+function findStock(kind,id){ return allStockRows().find(r=>r.kind===kind&&(r.id||"")===(id||"")); }
 function renderBalances(){
   const el=$("#view-balances");
   if(!state.ready){ el.innerHTML=""; return; }
-  const ms=can("manage_stock"), rows=stockRows();
+  const inShop=state.section==="shop", ms=can("manage_stock"), rows=stockRows();
   let total=0; rows.forEach(r=>{ total+=Math.max(0,r.qty)*r.price; });
-  let html='<div class="logbar"><div><h2>Balances</h2><p class="sub">How much of each product is left. Sales lower these figures automatically.'+(ms?"":" Admins keep the stock up to date.")+'</p></div>'
-    +(ms?'<button class="btn" data-act="add-cereal">Add cereal</button>':"")+'</div>';
-  html+='<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>';
-  html+='<div class="ledger">'+rows.map(r=>{
-    const out=r.qty<=0, attr='data-kind="'+r.kind+'" data-id="'+esc(r.id||"")+'"';
-    return '<div class="row"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
-      +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+esc(fmtKES(r.price)+" a "+(r.kind==="milk"?"litre":"kg")+(out?"":", worth "+fmtKES(r.qty*r.price)))+'</div>'
-      +(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':"")+'</div>'
-      +'<div class="entry"><div class="bal">'+fmtL(Math.max(0,r.qty))+' <small>'+r.unit+'</small></div>'+(out?'<span class="pill due">Out of stock</span>':"")+'</div></div>';
-  }).join("")+'</div>';
+  const title=inShop?"Shop products":"Milk balance";
+  const sub=inShop
+    ? "What's in stock, and what each sells for. Sales lower these figures automatically."+(ms?"":" Admins keep the stock up to date.")
+    : "How much milk is ready to sell."+(ms?"":" Admins keep this up to date.");
+  let html='<div class="logbar"><div><h2>'+title+'</h2><p class="sub">'+sub+'</p></div>'
+    +(ms&&inShop?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div>';
+  if(!rows.length){
+    html+='<div class="ledger"><div class="empty"><p>No products have been added yet.</p>'+(ms?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div></div>';
+  } else {
+    html+='<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>';
+    html+='<div class="ledger">'+rows.map(r=>{
+      const out=r.qty<=0, attr='data-kind="'+r.kind+'" data-id="'+esc(r.id||"")+'"', uw=unitWord(r.unit);
+      return '<div class="row"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
+        +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+esc(fmtKES(r.price)+" a "+(r.kind==="milk"?"litre":uw)+(out?"":", worth "+fmtKES(r.qty*r.price)))+'</div>'
+        +(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':"")+'</div>'
+        +'<div class="entry"><div class="bal">'+fmtL(Math.max(0,r.qty))+' <small>'+r.unit+'</small></div>'+(out?'<span class="pill due">Out of stock</span>':"")+'</div></div>';
+    }).join("")+'</div>';
+  }
   el.innerHTML=html;
 }
 
@@ -1242,25 +1274,30 @@ function renderFarm(){
   el.innerHTML=html;
 }
 
-/* ----- Daily summary ----- */
+/* ----- Daily summary (Milk sales under Farm, Shop sales under Shop) ----- */
 function nowClock(){ const d=new Date(); return pad(d.getHours())+":"+pad(d.getMinutes()); }
-function productName(x){ if(x.kind==="milk") return "Milk"; const c=findCereal(x.cerealId); return c?c.name:"Cereal"; }
+function productName(x){ if(x.kind==="milk") return "Milk"; const c=findCereal(x.cerealId); return c?c.name:"Product"; }
+function productUnit(x){ return x.kind==="milk"?"L":unitWord((findCereal(x.cerealId)||{}).unit); }
+// Farm's Sales page only offers Milk; Shop's offers every shop product
 function productList(){
-  const list=[{value:"milk",kind:"milk",id:null,name:"Milk",unit:"L",price:milkPrice(),qty:state.settings.milkStock}];
-  sortedCereals().forEach(c=>list.push({value:"c:"+c.id,kind:"cereal",id:c.id,name:c.name,unit:"kg",price:c.price,qty:c.qty}));
-  return list;
+  return allStockRows().filter(r=>state.section==="farm"?r.kind==="milk":r.kind!=="milk")
+    .map(r=>({value:r.kind==="milk"?"milk":"c:"+r.id, kind:r.kind, id:r.id, name:r.name, unit:r.unit, price:r.price, qty:r.qty}));
 }
 function selectedProduct(){ const l=productList(); return l.find(p=>p.value===state.sale.product)||l[0]; }
 
 function renderDaily(){
   const el=$("#view-daily");
   if(!state.ready){ el.innerHTML=""; return; }
-  if(!el.querySelector("#dailybody")){
+  const inShop=state.section==="shop";
+  const key="daily-"+state.section;
+  if(el.dataset.built!==key){
     if(!state.sale.time) state.sale.time=nowClock();
-    el.innerHTML='<div class="logbar"><div><h2>Daily summary</h2><p class="sub">Record what you sold and when. Each sale lowers the stock.</p></div>'
+    state.sale.product=inShop?state.sale.product:"milk";
+    el.innerHTML='<div class="logbar"><div><h2>'+(inShop?"Shop sales":"Milk sales")+'</h2><p class="sub">'
+      +(inShop?"Record what was sold at the shop, and when.":"Record milk sold, and when.")+' Each sale lowers the stock.</p></div>'
       +'<div class="field"><label for="dailydate">Date</label><input type="date" id="dailydate" max="'+todayStr()+'"></div></div>'
       +'<form id="saleform" class="salecard" novalidate><div class="grid3">'
-      +'<div class="field"><label for="s-product">Product</label><select id="s-product"></select></div>'
+      +(inShop?'<div class="field"><label for="s-product">Product</label><select id="s-product"></select></div>':'')
       +'<div class="field"><label for="s-qty">Quantity <span class="hint" id="s-unit"></span></label><input type="number" id="s-qty" inputmode="decimal" min="0" step="any" placeholder="0"></div>'
       +'<div class="field"><label for="s-time">Time of sale</label><input type="time" id="s-time"></div></div>'
       +'<div class="saleinfo" id="saleinfo"></div><div class="error" id="saleerr" role="alert" hidden></div>'
@@ -1268,6 +1305,7 @@ function renderDaily(){
       +'<div id="salenote"></div><div id="dailybody"></div>';
     $("#dailydate").value=state.salesDate;
     $("#s-qty").value=state.sale.qty; $("#s-time").value=state.sale.time;
+    el.dataset.built=key;
   }
   ensureMonth(monthOf(state.salesDate));
   refreshSaleForm();
@@ -1278,34 +1316,38 @@ function refreshSaleForm(){
   $("#saleform").hidden=!isToday;
   $("#salenote").innerHTML=isToday?"":'<div class="note">You can only record sales for today. This day is view only.</div>';
   const sel=$("#s-product"), list=productList(), cur=state.sale.product;
-  sel.innerHTML=list.map(p=>'<option value="'+esc(p.value)+'">'+esc(p.name)+(p.qty<=0?" (out of stock)":"")+'</option>').join("");
-  sel.value=list.some(p=>p.value===cur)?cur:"milk"; state.sale.product=sel.value;
+  if(sel){
+    sel.innerHTML=list.map(p=>'<option value="'+esc(p.value)+'">'+esc(p.name)+(p.qty<=0?" (out of stock)":"")+'</option>').join("");
+    sel.value=list.some(p=>p.value===cur)?cur:(list[0]?list[0].value:"");
+  }
+  state.sale.product=sel?sel.value:(list[0]?list[0].value:"milk");
   updateSaleInfo();
 }
 function updateSaleInfo(){
   const info=$("#saleinfo"); if(!info) return;
-  const p=selectedProduct(), n=parseFloat(state.sale.qty), word=p.kind==="milk"?"litre":"kg";
-  $("#s-unit").textContent="("+(p.kind==="milk"?"litres":"kg")+")";
+  const p=selectedProduct(); if(!p){ info.textContent=""; return; }
+  const n=parseFloat(state.sale.qty), word=unitWord(p.unit);
+  $("#s-unit").textContent="("+word+")";
   info.innerHTML=esc(fmtKES(p.price)+" a "+word+". ")+(p.qty>0?esc(fmtL(p.qty)+" "+p.unit+" left in stock."):"Out of stock.")
     +(isFinite(n)&&n>0?' Amount: <b>'+esc(fmtKES(n*p.price))+'</b>':"");
 }
 function renderDailyBody(){
   const body=$("#dailybody"); if(!body) return;
-  const d=state.salesDate;
+  const d=state.salesDate, wantKind=state.section==="farm"?"milk":"cereal";
   if(!state.loadedMonths.has(monthOf(d))){ body.innerHTML='<div class="note">Loading…</div>'; return; }
-  const day=state.sales.filter(x=>x.d===d).sort((a,b)=>a.ts-b.ts);
+  const day=state.sales.filter(x=>x.d===d&&x.kind===wantKind).sort((a,b)=>a.ts-b.ts);
   const label=fmtDate(d,{weekday:"long",day:"numeric",month:"long"});
   if(!day.length){ body.innerHTML='<div class="ledger"><div class="empty"><p>No sales recorded on '+esc(label)+'.</p></div></div>'; return; }
   let total=0; const agg={};
   day.forEach(x=>{
     const amt=x.qty*x.p; total+=amt;
     const key=x.kind==="milk"?"milk":x.cerealId;
-    const a=agg[key]||(agg[key]={name:productName(x),unit:x.kind==="milk"?"L":"kg",qty:0,amt:0}); a.qty+=x.qty; a.amt+=amt;
+    const a=agg[key]||(agg[key]={name:productName(x),unit:productUnit(x),qty:0,amt:0}); a.qty+=x.qty; a.amt+=amt;
   });
   let html='<p class="sumline">Sales on '+esc(label)+': <b>'+esc(fmtKES(total))+'</b> from '+day.length+(day.length===1?" sale":" sales")+'.</p>';
   html+='<h3 class="sec" style="margin-top:0">Sales by time</h3><div class="ledger">'+day.map(x=>{
-    const unit=x.kind==="milk"?"L":"kg", nm=productName(x);
-    return '<div class="sale"><div><div class="nm">'+esc(fmtClock(x.ts))+', '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'</div><div class="meta">at '+esc(fmtKES(x.p))+' a '+(x.kind==="milk"?"litre":"kg")+'</div></div>'
+    const unit=productUnit(x), nm=productName(x);
+    return '<div class="sale"><div><div class="nm">'+esc(fmtClock(x.ts))+', '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'</div><div class="meta">at '+esc(fmtKES(x.p))+' a '+unit+'</div></div>'
       +'<div class="saleamt">'+esc(fmtKES(x.qty*x.p))+(can("remove_sales")?'<button class="btn ghost small" data-act="remove-sale" data-id="'+esc(x.id)+'" aria-label="Remove sale of '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'">Remove</button>':"")+'</div></div>';
   }).join("")+'</div>';
   html+='<h3 class="sec">Totals by product</h3><div class="scroll"><table><thead><tr><th>Product</th><th>Quantity sold</th><th>Amount</th></tr></thead><tbody>'
@@ -1320,7 +1362,7 @@ async function recordSaleFromForm(){
   if(!(n>0)) return fail("Enter the quantity sold.");
   if(n>MAX_KG) return fail("That quantity is too large.");
   if(p.qty<=0) return fail(p.name+" is out of stock.");
-  if(n>p.qty+1e-9) return fail("Only "+fmtL(p.qty)+" "+p.unit+" of "+p.name+" is left. You entered "+fmtL(n)+".");
+  if(n>p.qty+1e-9) return fail("Only "+fmtL(p.qty)+" "+unitWord(p.unit)+" of "+p.name+" is left. You entered "+fmtL(n)+".");
   if(!/^\d{2}:\d{2}$/.test(time||"")) return fail("Enter the time of the sale.");
   const t=time.split(":").map(Number), when=new Date(); when.setHours(t[0],t[1],0,0);
   if(when.getTime()>Date.now()+5*60000) return fail("The time can't be in the future.");
@@ -1511,26 +1553,35 @@ function renderSummary(){
       +'</tbody><tfoot><tr><td>Whole herd</td><td></td><td>'+fmtL(total)+'</td><td></td><td>'+fmtKES(totalKes)+'</td></tr></tfoot></table></div>';
   }
 
-  html+='<h3 class="sec">Sales</h3>';
+  html+='<h3 class="sec">Milk sales</h3>';
+  const milkAgg={qty:0,kes:0};
+  for(const e of state.sales){ if(monthOf(e.d)===m&&e.kind==="milk"){ milkAgg.qty+=e.qty; milkAgg.kes+=e.qty*e.p; } }
+  html+=milkAgg.qty<=0
+    ? '<div class="ledger"><div class="empty"><p>No milk was sold in '+esc(monthLabel(m))+'.</p></div></div>'
+    : '<p class="sumline" style="margin-top:0">'+fmtL(milkAgg.qty)+' litres sold for <b>'+fmtKES(milkAgg.kes)+'</b>.</p>';
+
+  html+='<h3 class="sec">Shop sales</h3>';
   const agg={};
   for(const e of state.sales){
-    if(monthOf(e.d)!==m) continue;
-    if(e.kind==="cereal"&&!findCereal(e.cerealId)) continue;
-    const key=e.kind==="milk"?"milk":e.cerealId;
-    const a=agg[key]||(agg[key]={name:productName(e),kind:e.kind,cerealId:e.cerealId,qty:0,kes:0}); a.qty+=e.qty; a.kes+=e.qty*e.p;
+    if(monthOf(e.d)!==m||e.kind!=="cereal") continue;
+    if(!findCereal(e.cerealId)) continue;
+    const a=agg[e.cerealId]||(agg[e.cerealId]={name:productName(e),cerealId:e.cerealId,unit:productUnit(e),qty:0,kes:0}); a.qty+=e.qty; a.kes+=e.qty*e.p;
   }
   const list=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>b.kes-a.kes);
+  let shopKes=0;
   if(!list.length){
-    html+='<div class="ledger"><div class="empty"><p>Nothing was sold in '+esc(monthLabel(m))+'.</p></div></div>';
+    html+='<div class="ledger"><div class="empty"><p>Nothing was sold at the shop in '+esc(monthLabel(m))+'.</p></div></div>';
   } else {
-    let kesT=0; list.forEach(a=>{ kesT+=a.kes; });
+    list.forEach(a=>{ shopKes+=a.kes; });
     html+='<div class="scroll"><table><thead><tr><th>Product</th><th>Quantity sold</th><th>Sales value</th><th>Left in stock now</th></tr></thead><tbody>'
       +list.map(a=>{
-        const unit=a.kind==="milk"?"L":"kg", left=a.kind==="milk"?state.settings.milkStock:(findCereal(a.cerealId)||{qty:0}).qty;
-        return '<tr><td>'+esc(a.name)+'</td><td>'+fmtL(a.qty)+' '+unit+'</td><td>'+fmtKES(a.kes)+'</td><td>'+fmtL(Math.max(0,left))+' '+unit+'</td></tr>';
+        const left=(findCereal(a.cerealId)||{qty:0}).qty;
+        return '<tr><td>'+esc(a.name)+'</td><td>'+fmtL(a.qty)+' '+a.unit+'</td><td>'+fmtKES(a.kes)+'</td><td>'+fmtL(Math.max(0,left))+' '+a.unit+'</td></tr>';
       }).join("")
-      +'</tbody><tfoot><tr><td>All products</td><td></td><td>'+fmtKES(kesT)+'</td><td></td></tr></tfoot></table></div>';
+      +'</tbody><tfoot><tr><td>All shop products</td><td></td><td>'+fmtKES(shopKes)+'</td><td></td></tr></tfoot></table></div>';
   }
+
+  html+='<div class="total" style="position:static;margin-top:28px"><div><div class="eq">Total revenue for '+esc(monthLabel(m))+'</div><div class="big">'+fmtKES(milkAgg.kes+shopKes)+'</div><div class="eq">'+fmtKES(milkAgg.kes)+' from milk, '+fmtKES(shopKes)+' from the shop</div></div></div>';
   el.innerHTML=html;
 }
 
@@ -1639,15 +1690,18 @@ function formHTML(c){
     +'<div class="actions"><button type="button" class="btn ghost" data-act="cancel-form">Cancel</button><button type="submit" class="btn" id="cowsave">Save cow</button></div></form></div>';
 }
 
+const UNITS=[["kg","Kilograms (kg)"],["litre","Litres"],["piece","Pieces"],["bag","Bags"],["bunch","Bunches"],["packet","Packets"]];
 function cerealFormHTML(c){
-  return '<div class="dlg"><h2 style="margin-bottom:14px">'+(c?"Edit cereal":"Add cereal")+'</h2><form id="cerealform" novalidate><div class="grid2">'
-    +'<div class="field full"><label for="c-name">Cereal name</label><input type="text" id="c-name" maxlength="60" value="'+esc(c&&c.name)+'" placeholder="Maize, beans, rice"></div>'
-    +'<div class="field"><label for="c-price">Price per kg <span class="hint">(KES)</span></label><input type="number" id="c-price" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.price)+'"></div>'
-    +'<div class="field"><label for="c-qty">Quantity remaining <span class="hint">(kg)</span></label><input type="number" id="c-qty" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.qty)+'"></div>'
+  const unit=(c&&c.unit)||"kg";
+  return '<div class="dlg"><h2 style="margin-bottom:14px">'+(c?"Edit product":"Add product")+'</h2><form id="cerealform" novalidate><div class="grid2">'
+    +'<div class="field full"><label for="c-name">Product name</label><input type="text" id="c-name" maxlength="60" value="'+esc(c&&c.name)+'" placeholder="Maize, beans, rice, soap"></div>'
+    +'<div class="field"><label for="c-unit">Sold by</label><select id="c-unit">'+UNITS.map(u=>'<option value="'+u[0]+'"'+(u[0]===unit?" selected":"")+'>'+esc(u[1])+'</option>').join("")+'</select></div>'
+    +'<div class="field"><label for="c-price">Price per unit <span class="hint">(KES)</span></label><input type="number" id="c-price" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.price)+'"></div>'
+    +'<div class="field"><label for="c-qty">Quantity remaining</label><input type="number" id="c-qty" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.qty)+'"></div>'
     +'</div><p class="sub" style="margin-top:12px">Enter the amount you have now. Sales lower it automatically, so change it only to restock or correct a count. A new price applies to future sales only.</p>'
     +'<div class="error" id="formerr" role="alert" hidden></div>'
-    +'<div class="actions">'+(c?'<button type="button" class="btn danger" data-act="ask-delete-cereal">Delete cereal</button>':"")
-    +'<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="cerealsave">Save cereal</button></div></form></div>';
+    +'<div class="actions">'+(c?'<button type="button" class="btn danger" data-act="ask-delete-cereal">Delete product</button>':"")
+    +'<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="cerealsave">Save product</button></div></form></div>';
 }
 /* ----- Profile cards and edit forms ----- */
 const PHONE_RE=/^[0-9+() -]{7,20}$/;
@@ -1766,9 +1820,9 @@ function memberConfirmHTML(m){
     +'<div class="actions"><button class="btn ghost" data-act="cancel-member-remove">Keep member</button><button class="btn danger" id="delbtn" data-act="remove-member">Remove member</button></div></div>';
 }
 function cerealConfirmHTML(c){
-  return '<div class="dlg"><h2>Delete '+esc(c.name)+'?</h2><p>This removes the cereal and its sales records. It can\'t be undone.</p>'
+  return '<div class="dlg"><h2>Delete '+esc(c.name)+'?</h2><p>This removes the product and its sales records. It can\'t be undone.</p>'
     +'<div class="error" id="delerr" role="alert" hidden></div>'
-    +'<div class="actions"><button class="btn ghost" data-act="cancel-delete-cereal">Keep cereal</button><button class="btn danger" id="delbtn" data-act="delete-cereal">Delete cereal</button></div></div>';
+    +'<div class="actions"><button class="btn ghost" data-act="cancel-delete-cereal">Keep product</button><button class="btn danger" id="delbtn" data-act="delete-cereal">Delete product</button></div></div>';
 }
 
 function readForm(){
@@ -1826,21 +1880,22 @@ async function deleteCow(){
 async function saveCereal(){
   const btn=document.getElementById("cerealsave");
   const g=id=>document.getElementById(id).value.trim();
-  const name=g("c-name"), price=parseFloat(g("c-price")), qty=parseFloat(g("c-qty"));
+  const name=g("c-name"), unit=g("c-unit"), price=parseFloat(g("c-price")), qty=parseFloat(g("c-qty"));
   const editing=state.dlg&&state.dlg.id?findCereal(state.dlg.id):null;
-  if(!name) return showErr("formerr","Enter the cereal name.");
+  if(!name) return showErr("formerr","Enter the product name.");
   if(state.cereals.find(c=>c.id!==(editing&&editing.id)&&String(c.name).toLowerCase()===name.toLowerCase())) return showErr("formerr",name+" is already in the list.");
-  if(!(price>0&&price<=MAX_KG)) return showErr("formerr","Enter a price per kg above 0, for example 120.");
-  if(!(qty>=0&&qty<=1e7)) return showErr("formerr","Enter the quantity remaining in kg, 0 or more.");
+  if(!UNITS.some(u=>u[0]===unit)) return showErr("formerr","Choose what it's sold by.");
+  if(!(price>0&&price<=MAX_KG)) return showErr("formerr","Enter a price per unit above 0, for example 120.");
+  if(!(qty>=0&&qty<=1e7)) return showErr("formerr","Enter the quantity remaining, 0 or more.");
   document.getElementById("formerr").hidden=true; btn.disabled=true; btn.textContent="Saving…";
-  const row={name:name,price_per_kg:round2(price),qty_kg:round2(qty)};
+  const row={name:name,unit:unit,price_per_kg:round2(price),qty_kg:round2(qty)};
   try{
     if(editing) needRows(await run(sb.from("cereals").update(row).eq("id",editing.id).select("id")));
     else await run(sb.from("cereals").insert(row));
     await loadCore();
-    closeDlg(); toast("Cereal saved"); scheduleRender();
+    closeDlg(); toast("Product saved"); scheduleRender();
   }catch(e){
-    showErr("formerr","Couldn't save the cereal. "+friendly(e)); btn.disabled=false; btn.textContent="Save cereal";
+    showErr("formerr","Couldn't save the product. "+friendly(e)); btn.disabled=false; btn.textContent="Save product";
   }
 }
 async function deleteCereal(){
@@ -1850,16 +1905,23 @@ async function deleteCereal(){
   try{
     needRows(await run(sb.from("cereals").delete().eq("id",id).select("id")));
     await loadCore(); await Promise.all(Array.from(state.loadedMonths).map(loadMonth));
-    closeDlg(); toast("Cereal deleted"); scheduleRender();
+    closeDlg(); toast("Product deleted"); scheduleRender();
   }catch(e){
-    errEl.textContent="Couldn't delete the cereal. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Delete cereal";
+    errEl.textContent="Couldn't delete the product. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Delete product";
   }
 }
 
 /* ---------- Events ---------- */
 document.addEventListener("click",e=>{
+  const sec=e.target.closest("[data-section]");
+  if(sec){
+    state.section=sec.dataset.section;
+    const tabs=SECTION_TABS[state.section]; if(tabs) state.tab=tabs[0][0];
+    if(state.section==="members") state.members.loaded=false;
+    renderAll(); return;
+  }
   const tab=e.target.closest("[data-tab]");
-  if(tab){ state.tab=tab.dataset.tab; if(state.tab==="members") state.members.loaded=false; renderAll(); return; }
+  if(tab){ state.tab=tab.dataset.tab; renderAll(); return; }
   const at=e.target.closest("[data-authtab]");
   if(at){ state.authTab=at.dataset.authtab; state.authNote=""; renderAuth(); return; }
   const open=e.target.closest("[data-open]");
@@ -1880,7 +1942,7 @@ document.addEventListener("click",e=>{
     case "remove-member": removeMember(); break;
     case "reload-members": state.members.loaded=false; renderMembers(); break;
     case "retry": state.error=""; if(state.ready){ reloadAll(); } else { enterApp(); } break;
-    case "goto-herd": state.tab="herd"; renderAll(); break;
+    case "goto-herd": state.section="farm"; state.tab="herd"; renderAll(); break;
     case "save-milk": saveMilk(); break;
     case "add": openForm(null); break;
     case "edit": openForm(state.dlg.id); break;
