@@ -295,7 +295,7 @@ const state = {
   settings:{milkPrice:70,milkStock:0},
   salesDate:todayStr(), sale:{product:"milk",qty:"",time:""},
   feed:{}, feedDraft:{}, careDate:todayStr(),
-  staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualDate:todayStr(), casualDraft:{},
+  staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualWorkers:[], casualDate:todayStr(), casualDraft:{},
   members:{list:[],allowAdminSignup:true,loaded:false,loading:false,error:""},
   section:"farm", tab:"log", date:todayStr(), month:todayStr().slice(0,7),
   draft:{}, saving:false, dlg:null
@@ -507,16 +507,18 @@ async function loadMonth(m){
     fetchAll((a,b)=>sb.from("sales").select("*").gte("sold_on",start).lte("sold_on",end).order("sold_at").order("id").range(a,b)),
     fetchAll((a,b)=>sb.from("cow_feed").select("*").gte("entry_date",start).lte("entry_date",end).order("entry_date").order("cow_id").range(a,b)),
     fetchAll((a,b)=>sb.from("casual_labor_days").select("*").gte("work_date",start).lte("work_date",end).order("work_date").range(a,b)),
-    fetchAll((a,b)=>sb.from("farm_costs").select("*").gte("cost_date",start).lte("cost_date",end).order("cost_date").range(a,b))
+    fetchAll((a,b)=>sb.from("farm_costs").select("*").gte("cost_date",start).lte("cost_date",end).order("cost_date").range(a,b)),
+    fetchAll((a,b)=>sb.from("casual_workers").select("*").gte("work_date",start).lte("work_date",end).order("work_date").order("created_at").range(a,b))
   ]);
   for(const k of Object.keys(state.milk)) if(k.split("|")[1].slice(0,7)===m){ delete state.milk[k]; delete state.milkPrices[k]; }
   res[0].forEach(r=>{ const k=r.cow_id+"|"+r.entry_date; state.milk[k]=Number(r.litres); if(r.price_per_litre!=null) state.milkPrices[k]=Number(r.price_per_litre); });
   state.sales=state.sales.filter(x=>monthOf(x.d)!==m).concat(res[1].map(saleFromRow));
   for(const k of Object.keys(state.feed)) if(k.split("|")[1].slice(0,7)===m) delete state.feed[k];
-  res[2].forEach(r=>{ state.feed[r.cow_id+"|"+r.entry_date]={silage:Number(r.silage_kg),other:Number(r.other_fodder_kg),otherType:r.other_fodder_type||"",meal:Number(r.dairy_meal_kg),supplement:Number(r.supplement_kg)}; });
+  res[2].forEach(r=>{ state.feed[r.cow_id+"|"+r.entry_date]={silage:Number(r.silage_kg),other:Number(r.other_fodder_kg),otherType:r.other_fodder_type||"",meal:Number(r.dairy_meal_kg),supplement:Number(r.supplement_kg),silageCost:Number(r.silage_cost_per_kg||0),otherCost:Number(r.other_fodder_cost_per_kg||0),mealCost:Number(r.dairy_meal_cost_per_kg||0),supplementCost:Number(r.supplement_cost_per_kg||0)}; });
   for(const k of Object.keys(state.casual)) if(k.slice(0,7)===m) delete state.casual[k];
   res[3].forEach(r=>{ state.casual[r.work_date]={count:r.casual_count,wage:Number(r.daily_wage)}; });
   state.costs=state.costs.filter(x=>monthOf(x.date)!==m).concat(res[4].map(costFromRow));
+  state.casualWorkers=state.casualWorkers.filter(x=>monthOf(x.work_date)!==m).concat(res[5]||[]);
   state.loadedMonths.add(m);
 }
 const loadingMonths=new Set();
@@ -788,7 +790,7 @@ function resetToLogin(){
   state.cows=[]; state.cereals=[]; state.roles=[]; state.milk={}; state.milkPrices={}; state.sales=[]; state.loadedMonths=new Set();
   state.settings={milkPrice:70,milkStock:0}; state.salesDate=todayStr(); state.sale={product:"milk",qty:"",time:""};
   state.feed={}; state.feedDraft={}; state.careDate=todayStr();
-  state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.costs=[]; state.casual={}; state.casualDate=todayStr(); state.casualDraft={};
+  state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.costs=[]; state.casual={}; state.casualWorkers=[]; state.casualDate=todayStr(); state.casualDraft={};
   state.members={list:[],allowAdminSignup:true,loaded:false,loading:false,error:""};
   state.draft={}; state.section="farm"; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
   renderAll();
@@ -857,7 +859,7 @@ function rowHTML(c){
   const meta=[c.name?"Tag "+c.tag:"",c.breed||"",c.status&&c.status!=="milking"?label(STATUSES,c.status):""].filter(Boolean).join(", ");
   return '<div class="row">'+coat(c.id,44)
     +'<div><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div></div>'
-    +'<div class="entry"><div class="lit"><input type="number" inputmode="decimal" min="0" max="'+MAX_LITRES+'" step="any" placeholder="0" data-cow="'+esc(c.id)+'" aria-label="Litres from '+esc(cowLabel(c))+'" value="'+esc(val)+'"><span>L</span></div>'
+    +'<div class="entry"><div class="lit"><input type="number" inputmode="decimal" min="0" max="'+MAX_LITRES+'" step="any" placeholder="0" data-cow="'+esc(c.id)+'" aria-label="Litres from '+esc(cowLabel(c))+'" value="'+esc(val)+'"><span>L</span></div><button class="btn ghost small" type="button" data-act="edit-milk-row" data-id="'+esc(c.id)+'">Edit log</button>'
     +'<div class="kes" data-kes="'+esc(c.id)+'">'+kes+'</div></div></div>';
 }
 
@@ -933,7 +935,7 @@ function renderHerd(){
 }
 
 /* ----- Feed: fodder, dairy meal and supplements ----- */
-function feedFor(cowId,date){ return state.feed[cowId+"|"+date]||{silage:0,other:0,otherType:"",meal:0,supplement:0}; }
+function feedFor(cowId,date){ return state.feed[cowId+"|"+date]||{silage:0,other:0,otherType:"",meal:0,supplement:0,silageCost:0,otherCost:0,mealCost:0,supplementCost:0}; }
 function renderFeed(){
   const el=$("#view-feed");
   if(!state.ready){ el.innerHTML=""; return; }
@@ -955,10 +957,10 @@ function feedRowHTML(c){
   const meta=[c.name?"Tag "+c.tag:"",c.breed||""].filter(Boolean).join(", ");
   const num=(field,label,ph)=>'<div class="f"><label for="feed-'+field+'-'+esc(c.id)+'">'+label+'</label><input type="number" inputmode="decimal" min="0" step="any" placeholder="'+(ph||"0")+'" id="feed-'+field+'-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="'+field+'" value="'+esc(feedValue(c.id,field))+'"></div>';
   return '<div class="care">'+coat(c.id,44)
-    +'<div style="min-width:120px;flex:none"><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div></div>'
+    +'<div style="min-width:120px;flex:none"><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div><button class="btn ghost small" type="button" data-act="edit-feed-row" data-id="'+esc(c.id)+'">Edit feed</button></div>'
     +'<div class="cf">'+num("silage","Silage (kg)")+num("other","Other fodder (kg)")
     +'<div class="f"><label for="feed-otherType-'+esc(c.id)+'">Other fodder type</label><input type="text" maxlength="40" placeholder="Napier grass" id="feed-otherType-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="otherType" value="'+esc(feedValue(c.id,"otherType"))+'"></div>'
-    +num("meal","Dairy meal (kg)")+num("supplement","Supplements (kg)")+'</div></div>';
+    +num("meal","Dairy meal (kg)")+num("supplement","Supplements (kg)")+num("silageCost","Silage cost/kg (KES)")+num("otherCost","Other fodder cost/kg (KES)")+num("mealCost","Dairy meal cost/kg (KES)")+num("supplementCost","Supplement cost/kg (KES)")+'</div></div>';
 }
 function feedPending(){
   const out=[];
@@ -966,7 +968,7 @@ function feedPending(){
     const key=(f)=>state.careDate+"|"+c.id+"|"+f, cur=feedFor(c.id,state.careDate);
     const vals={};
     let changed=false, hasVal=false;
-    ["silage","other","meal","supplement"].forEach(f=>{
+    ["silage","other","meal","supplement","silageCost","otherCost","mealCost","supplementCost"].forEach(f=>{
       const raw=key(f) in state.feedDraft ? state.feedDraft[key(f)] : String(cur[f]||"");
       const n=parseFloat(raw)||0;
       vals[f]=n; if(n>0) hasVal=true;
@@ -1000,8 +1002,8 @@ function renderFeedBody(){
     html='<div class="ledger"><div class="empty"><p>There are no cows in the herd yet.</p></div></div>';
   } else {
     html='<div class="ledger">'+cows.map(feedRowHTML).join("")+'</div>';
-    let ts=0,to=0,tm=0,tp=0;
-    for(const c of cows){ const f=feedFor(c.id,state.careDate); ts+=f.silage; to+=f.other; tm+=f.meal; tp+=f.supplement; }
+    let ts=0,to=0,tm=0,tp=0,feedCost=0;
+    for(const c of cows){ const f=feedFor(c.id,state.careDate); ts+=f.silage; to+=f.other; tm+=f.meal; tp+=f.supplement; feedCost+=f.silage*f.silageCost+f.other*f.otherCost+f.meal*f.mealCost+f.supplement*f.supplementCost; }
     html+='<div class="total"><div><div class="eq">Total for '+esc(fmtDate(state.careDate,{weekday:"short",day:"numeric",month:"short"}))+'</div>'
       +'<div class="eq">'+fmtL(ts)+' kg silage, '+fmtL(to)+' kg other fodder, '+fmtL(tm)+' kg dairy meal, '+fmtL(tp)+' kg supplements</div></div>'
       +'<button class="btn" id="savefeed" data-act="save-feed">Save feed</button></div>'
@@ -1023,11 +1025,11 @@ async function saveFeed(){
   state.saving=true; updateFeedButton();
   const date=state.careDate;
   try{
-    const rows=changes.map(c=>({cow_id:c.id,entry_date:date,silage_kg:round2(c.vals.silage),other_fodder_kg:round2(c.vals.other),other_fodder_type:c.vals.otherType||null,dairy_meal_kg:round2(c.vals.meal),supplement_kg:round2(c.vals.supplement)}));
+    const rows=changes.map(c=>({cow_id:c.id,entry_date:date,silage_kg:round2(c.vals.silage),other_fodder_kg:round2(c.vals.other),other_fodder_type:c.vals.otherType||null,dairy_meal_kg:round2(c.vals.meal),supplement_kg:round2(c.vals.supplement),silage_cost_per_kg:round2(c.vals.silageCost),other_fodder_cost_per_kg:round2(c.vals.otherCost),dairy_meal_cost_per_kg:round2(c.vals.mealCost),supplement_cost_per_kg:round2(c.vals.supplementCost)}));
     await run(sb.from("cow_feed").upsert(rows,{onConflict:"cow_id,entry_date"}));
     changes.forEach(c=>{
-      state.feed[c.id+"|"+date]={silage:c.vals.silage,other:c.vals.other,otherType:c.vals.otherType,meal:c.vals.meal,supplement:c.vals.supplement};
-      ["silage","other","meal","supplement","otherType"].forEach(f=>{ delete state.feedDraft[date+"|"+c.id+"|"+f]; });
+      state.feed[c.id+"|"+date]={silage:c.vals.silage,other:c.vals.other,otherType:c.vals.otherType,meal:c.vals.meal,supplement:c.vals.supplement,silageCost:c.vals.silageCost,otherCost:c.vals.otherCost,mealCost:c.vals.mealCost,supplementCost:c.vals.supplementCost};
+      ["silage","other","meal","supplement","otherType","silageCost","otherCost","mealCost","supplementCost"].forEach(f=>{ delete state.feedDraft[date+"|"+c.id+"|"+f]; });
     });
     toast("Feed saved");
   }catch(e){ toast("Couldn't save the feed. "+friendly(e),true); }
@@ -1192,6 +1194,33 @@ async function deleteCost(id){
   catch(e){ toast("Couldn't remove the cost. "+friendly(e),true); }
   scheduleRender();
 }
+
+async function saveCasualWorker(e){
+  e.preventDefault();
+  const name=$("#cw-name").value.trim(), task=$("#cw-task").value.trim(), wage=Number($("#cw-wage").value), err=$("#cw-err");
+  if(name.length<2||task.length<2||!(wage>=0)){err.textContent="Enter a worker name, task description and valid wage.";err.hidden=false;return;}
+  err.hidden=true;
+  try{
+    await run(sb.from("casual_workers").insert({work_date:state.casualDate,worker_name:name,task_description:task,daily_wage:round2(wage),recorded_by:state.user.id}));
+    $("#cw-name").value="";$("#cw-task").value="";$("#cw-wage").value="0";
+    await loadMonth(monthOf(state.casualDate));renderFarm();toast("Casual worker added");
+  }catch(ex){err.textContent="Couldn't save worker. "+friendly(ex);err.hidden=false;}
+}
+async function editCasualWorker(id){
+  const w=state.casualWorkers.find(x=>x.id===id); if(!w)return;
+  const name=prompt("Casual worker name:",w.worker_name); if(name===null)return;
+  const task=prompt("Task description:",w.task_description); if(task===null)return;
+  const wageRaw=prompt("Daily wage (KES):",String(w.daily_wage)); if(wageRaw===null)return;
+  const wage=Number(wageRaw);
+  if(name.trim().length<2||task.trim().length<2||!(wage>=0)){toast("Please enter a valid name, task and wage.",true);return;}
+  try{await run(sb.from("casual_workers").update({worker_name:name.trim(),task_description:task.trim(),daily_wage:round2(wage),updated_at:new Date().toISOString()}).eq("id",id));await loadMonth(monthOf(state.casualDate));renderFarm();toast("Casual worker updated");}
+  catch(ex){toast("Couldn't update worker. "+friendly(ex),true);}
+}
+async function deleteCasualWorker(id){
+  if(!confirm("Remove this casual worker record?"))return;
+  try{await run(sb.from("casual_workers").delete().eq("id",id));await loadMonth(monthOf(state.casualDate));renderFarm();toast("Casual worker removed");}
+  catch(ex){toast("Couldn't remove worker. "+friendly(ex),true);}
+}
 async function saveCasual(){
   const errEl=$("#casualerr"), count=parseInt(casualDraftVal("count"),10), wage=parseFloat(casualDraftVal("wage"));
   if(!(count>=0&&count<=500)){ errEl.textContent="Enter the number of casual workers, 0 or more."; errEl.hidden=false; return; }
@@ -1232,22 +1261,14 @@ function renderFarm(){
     +(state.staff.length?'<div class="ledger">'+state.staff.map(staffRowHTML).join("")+'</div>':'<div class="ledger"><div class="empty"><p>No permanent staff added yet.</p></div></div>')
     +(fin?'<p style="margin-top:10px"><button class="btn ghost small" data-act="staff-add">Add staff</button></p>':"")+'</div>';
 
-  html+='<div class="finsec"><h3 class="sec">Casual labourers</h3><div class="logbar" style="margin-bottom:10px"><p class="sub" style="margin:0">Number of casuals and their daily wage.</p>'
-    +'<div class="field"><label for="casualdate">Date</label><input type="date" id="casualdate" max="'+todayStr()+'" value="'+state.casualDate+'"></div></div>';
+  html+='<div class="finsec"><h3 class="sec">Casual labourers</h3><div class="logbar" style="margin-bottom:10px"><p class="sub" style="margin:0">Add each casual separately, including the task and wage.</p><div class="field"><label for="casualdate">Date</label><input type="date" id="casualdate" max="'+todayStr()+'" value="'+state.casualDate+'"></div></div>';
   if(fin){
-    const c=casualNow(), total=(parseFloat(casualDraftVal("count"))||0)*(parseFloat(casualDraftVal("wage"))||0);
-    html+='<div class="grid2" style="margin-bottom:8px"><div class="field"><label for="casual-count">Number of casuals</label><input type="number" id="casual-count" inputmode="numeric" min="0" step="1" value="'+esc(casualDraftVal("count"))+'"></div>'
-      +'<div class="field"><label for="casual-wage">Daily wage per casual <span class="hint">(KES)</span></label><input type="number" id="casual-wage" inputmode="decimal" min="0" step="any" value="'+esc(casualDraftVal("wage"))+'"></div></div>'
-      +'<p class="sub" id="casualtotal">'+(total>0?"Total for the day: "+fmtKES(total):"")+'</p>'
-      +'<div class="error" id="casualerr" role="alert" hidden></div><button class="btn" id="savecasual" data-act="save-casual">Save</button>';
+    html+='<form id="casualworkerform" class="salecard" novalidate><div class="grid2"><div class="field"><label for="cw-name">Casual worker name</label><input id="cw-name" type="text" maxlength="80" required></div><div class="field"><label for="cw-wage">Daily wage (KES)</label><input id="cw-wage" type="number" min="0" step="any" value="0" required></div><div class="field full"><label for="cw-task">Task description</label><textarea id="cw-task" maxlength="500" required placeholder="e.g. Cleaning the cowshed, cutting Napier grass..."></textarea></div></div><div class="error" id="cw-err" hidden></div><button class="btn" type="submit">Add casual worker</button></form>';
   }
-  const days=Object.keys(state.casual).filter(d=>monthOf(d)===monthOf(state.casualDate)).sort().reverse();
-  if(days.length){
-    html+='<div class="scroll" style="margin-top:16px"><table><thead><tr><th>Date</th><th>Casuals</th><th>Wage each</th><th>Total</th></tr></thead><tbody>'
-      +days.map(d=>{ const c=state.casual[d]; return '<tr><td>'+esc(fmtDate(d,{day:"numeric",month:"short"}))+'</td><td>'+c.count+'</td><td>'+fmtKES(c.wage)+'</td><td>'+fmtKES(c.count*c.wage)+'</td></tr>'; }).join("")
-      +'</tbody></table></div>';
-  }
-  html+='</div>';
+  const workers=state.casualWorkers.filter(w=>w.work_date===state.casualDate);
+  html+=workers.length?'<div class="ledger">'+workers.map(w=>'<div class="rolerow"><div><div class="nm">'+esc(w.worker_name)+'</div><div class="meta">'+esc(w.task_description)+'</div><div class="meta">'+fmtKES(Number(w.daily_wage))+' · '+esc(fmtDate(w.work_date))+'</div></div>'+(fin?'<div class="pactions" style="margin:0"><button class="btn ghost small" data-act="casual-edit" data-id="'+esc(w.id)+'">Edit</button><button class="btn danger small" data-act="casual-delete" data-id="'+esc(w.id)+'">Remove</button></div>':'')+'</div>').join("")+'</div>':'<div class="ledger"><div class="empty"><p>No casual workers recorded for this date.</p></div></div>';
+  const laborTotal=workers.reduce((sum,w)=>sum+Number(w.daily_wage||0),0);
+  html+='<p class="sumline">Casual labour total: <b>'+fmtKES(laborTotal)+'</b> · '+workers.length+' worker(s)</p></div>';
 
   html+='<div class="finsec"><h3 class="sec">Land</h3><div class="landgrid">';
   if(fin){
@@ -1302,14 +1323,39 @@ function renderDaily(){
       +'<div class="field"><label for="s-time">Time of sale</label><input type="time" id="s-time"></div></div>'
       +'<div class="saleinfo" id="saleinfo"></div><div class="error" id="saleerr" role="alert" hidden></div>'
       +'<button type="submit" class="btn" id="salebtn">Record sale</button></form>'
-      +'<div id="salenote"></div><div id="dailybody"></div>';
+      +'<div id="salenote"></div><div class="salecard"><h3 class="sec" style="margin-top:0">Milk use and distribution</h3><p class="sub">Record spoilt milk, home/staff use, calf milk, co-op deliveries and direct sales.</p><form id="allocform" novalidate><div class="grid2"><div class="field"><label for="alloc-type">Destination</label><select id="alloc-type"><option value="spoilt">Spoilt milk</option><option value="home_staff">Home / staff use</option><option value="calves">Calves</option><option value="coop">Sold to co-op society</option><option value="direct">Sold directly to end user</option></select></div><div class="field"><label for="alloc-qty">Quantity (litres)</label><input id="alloc-qty" type="number" min="0.01" step="any" required></div><div class="field"><label for="alloc-price">Price per litre (KES)</label><input id="alloc-price" type="number" min="0" step="any" value="'+esc(milkPrice())+'"></div><div class="field"><label for="alloc-customer">Buyer / notes</label><input id="alloc-customer" type="text" maxlength="200" placeholder="Co-op, customer, or notes"></div></div><div class="error" id="allocerr" hidden></div><button class="btn" type="submit">Save milk allocation</button></form><div id="alloc-history"></div></div><div id="dailybody"></div>';
     $("#dailydate").value=state.salesDate;
     $("#s-qty").value=state.sale.qty; $("#s-time").value=state.sale.time;
     el.dataset.built=key;
   }
   ensureMonth(monthOf(state.salesDate));
   refreshSaleForm();
-  renderDailyBody();
+  renderDailyBody(); loadMilkAllocations();
+}
+
+async function loadMilkAllocations(){
+  const box=$("#alloc-history"); if(!box||!state.ready) return;
+  try{
+    const rows=await run(sb.from("milk_allocations").select("*").eq("allocation_date",state.salesDate).order("created_at",{ascending:false}));
+    box.innerHTML=rows.length?'<div class="scroll" style="margin-top:12px"><table><thead><tr><th>Destination</th><th>Litres</th><th>Price/L</th><th>Buyer / notes</th><th></th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(({spoilt:"Spoilt",home_staff:"Home/staff",calves:"Calves",coop:"Co-op",direct:"Direct sale"})[r.allocation_type]||r.allocation_type)+'</td><td>'+fmtL(Number(r.quantity_litres))+'</td><td>'+fmtKES(Number(r.price_per_litre))+'</td><td>'+esc(r.customer||r.notes||"—")+'</td><td><button class="btn ghost small" data-act="delete-allocation" data-id="'+esc(r.id)+'">Delete</button></td></tr>').join("")+'</tbody></table></div>':'<p class="sub" style="margin-top:12px">No milk allocations recorded for this date.</p>';
+  }catch(e){ box.innerHTML='<p class="sub">Milk allocation history is unavailable. Run the updated SQL setup first.</p>'; }
+}
+async function saveMilkAllocation(e){
+  e.preventDefault();
+  const type=$("#alloc-type").value, qty=Number($("#alloc-qty").value), price=Number($("#alloc-price").value), customer=$("#alloc-customer").value.trim(), err=$("#allocerr");
+  if(!(qty>0)){err.textContent="Enter a quantity above zero.";err.hidden=false;return;}
+  if(!(price>=0)){err.textContent="Enter a price of zero or more.";err.hidden=false;return;}
+  if(state.salesDate!==todayStr()){err.textContent="Allocations can only be recorded for today.";err.hidden=false;return;}
+  err.hidden=true;
+  try{
+    await run(sb.from("milk_allocations").insert({allocation_date:state.salesDate,allocation_type:type,quantity_litres:round2(qty),price_per_litre:round2(price),customer:customer||null,recorded_by:state.user.id}));
+    $("#alloc-qty").value=""; $("#alloc-customer").value="";
+    toast("Milk allocation saved"); await loadMilkAllocations();
+  }catch(ex){err.textContent="Couldn't save allocation. "+friendly(ex);err.hidden=false;}
+}
+async function deleteMilkAllocation(id){
+  try{await run(sb.from("milk_allocations").delete().eq("id",id));toast("Allocation removed");await loadMilkAllocations();}
+  catch(e){toast("Couldn't remove allocation. "+friendly(e),true);}
 }
 function refreshSaleForm(){
   const isToday=state.salesDate===todayStr();
@@ -1912,6 +1958,7 @@ async function deleteCereal(){
 }
 
 /* ---------- Events ---------- */
+document.addEventListener("submit",e=>{ if(e.target&&e.target.id==="allocform"){saveMilkAllocation(e);return;} if(e.target&&e.target.id==="casualworkerform"){saveCasualWorker(e);return;} });
 document.addEventListener("click",e=>{
   const sec=e.target.closest("[data-section]");
   if(sec){
@@ -1944,6 +1991,8 @@ document.addEventListener("click",e=>{
     case "retry": state.error=""; if(state.ready){ reloadAll(); } else { enterApp(); } break;
     case "goto-herd": state.section="farm"; state.tab="herd"; renderAll(); break;
     case "save-milk": saveMilk(); break;
+    case "delete-allocation": deleteMilkAllocation(a.dataset.id); break;
+    case "edit-milk-row": { const inp=document.querySelector('#logbody input[data-cow="'+CSS.escape(a.dataset.id)+'"]'); if(inp){inp.focus();inp.select();} break; }
     case "add": openForm(null); break;
     case "edit": openForm(state.dlg.id); break;
     case "close": closeDlg(); break;
@@ -1967,6 +2016,7 @@ document.addEventListener("click",e=>{
     case "role-down": moveRole(a.dataset.id,1); break;
     case "remove-sale": removeSale(a.dataset.id); break;
     case "save-feed": saveFeed(); break;
+    case "edit-feed-row": { const inp=document.querySelector('#feedbody input[data-cow="'+CSS.escape(a.dataset.id)+'"]'); if(inp){inp.focus();inp.select();} break; }
     case "staff-add": openStaffForm(null); break;
     case "staff-edit": openStaffForm(a.dataset.id); break;
     case "staff-ask-delete": state.dlg={mode:"staff-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
@@ -1974,6 +2024,8 @@ document.addEventListener("click",e=>{
     case "cost-add": openCostForm(); break;
     case "cost-delete": deleteCost(a.dataset.id); break;
     case "save-casual": saveCasual(); break;
+    case "casual-edit": editCasualWorker(a.dataset.id); break;
+    case "casual-delete": deleteCasualWorker(a.dataset.id); break;
     case "save-land": saveLand(); break;
     case "prev-month": state.month=shiftMonth(state.month,-1); renderSummary(); break;
     case "next-month": state.month=shiftMonth(state.month,1); renderSummary(); break;
