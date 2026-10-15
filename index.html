@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Brumac Enterprises</title>
 <meta name="description" content="Herd records, daily milk log and cereal sales for the farm.">
-<link rel="icon" href="bmr.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%84%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
@@ -260,8 +260,8 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
 /* =====================================================================
    1. Paste your two Supabase values here (see README.md, step 4)
    ===================================================================== */
-const SUPABASE_URL = "https://cimzgmhemqkdqqlbxakx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";
+const SUPABASE_URL = "PASTE_YOUR_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
 
 /* ---------- Settings ---------- */
 // The milk price is stored in the database and admins change it in the app
@@ -859,7 +859,7 @@ function rowHTML(c){
   const meta=[c.name?"Tag "+c.tag:"",c.breed||"",c.status&&c.status!=="milking"?label(STATUSES,c.status):""].filter(Boolean).join(", ");
   return '<div class="row">'+coat(c.id,44)
     +'<div><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div></div>'
-    +'<div class="entry"><div class="lit"><input type="number" inputmode="decimal" min="0" max="'+MAX_LITRES+'" step="any" placeholder="0" data-cow="'+esc(c.id)+'" aria-label="Litres from '+esc(cowLabel(c))+'" value="'+esc(val)+'"><span>L</span></div><button class="btn ghost small" type="button" data-act="edit-milk-row" data-id="'+esc(c.id)+'">Edit log</button>'
+    +'<div class="entry"><div class="lit"><input type="number" inputmode="decimal" min="0" max="'+MAX_LITRES+'" step="any" placeholder="0" data-cow="'+esc(c.id)+'" aria-label="Litres from '+esc(cowLabel(c))+'" value="'+esc(val)+'" disabled><span>L</span></div><button class="btn ghost small" type="button" data-act="edit-milk-row" data-id="'+esc(c.id)+'" data-editing="0">Edit log</button>'
     +'<div class="kes" data-kes="'+esc(c.id)+'">'+kes+'</div></div></div>';
 }
 
@@ -955,11 +955,11 @@ function feedValue(cowId,field){
 }
 function feedRowHTML(c){
   const meta=[c.name?"Tag "+c.tag:"",c.breed||""].filter(Boolean).join(", ");
-  const num=(field,label,ph)=>'<div class="f"><label for="feed-'+field+'-'+esc(c.id)+'">'+label+'</label><input type="number" inputmode="decimal" min="0" step="any" placeholder="'+(ph||"0")+'" id="feed-'+field+'-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="'+field+'" value="'+esc(feedValue(c.id,field))+'"></div>';
+  const num=(field,label,ph)=>'<div class="f"><label for="feed-'+field+'-'+esc(c.id)+'">'+label+'</label><input type="number" inputmode="decimal" min="0" step="any" placeholder="'+(ph||"0")+'" id="feed-'+field+'-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="'+field+'" value="'+esc(feedValue(c.id,field))+'" disabled></div>';
   return '<div class="care">'+coat(c.id,44)
-    +'<div style="min-width:120px;flex:none"><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div><button class="btn ghost small" type="button" data-act="edit-feed-row" data-id="'+esc(c.id)+'">Edit feed</button></div>'
+    +'<div style="min-width:120px;flex:none"><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div><button class="btn ghost small" type="button" data-act="edit-feed-row" data-id="'+esc(c.id)+'" data-editing="0">Edit feed</button></div>'
     +'<div class="cf">'+num("silage","Silage (kg)")+num("other","Other fodder (kg)")
-    +'<div class="f"><label for="feed-otherType-'+esc(c.id)+'">Other fodder type</label><input type="text" maxlength="40" placeholder="Napier grass" id="feed-otherType-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="otherType" value="'+esc(feedValue(c.id,"otherType"))+'"></div>'
+    +'<div class="f"><label for="feed-otherType-'+esc(c.id)+'">Other fodder type</label><input type="text" maxlength="40" placeholder="Napier grass" id="feed-otherType-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="otherType" value="'+esc(feedValue(c.id,"otherType"))+'" disabled></div>'
     +num("meal","Dairy meal (kg)")+num("supplement","Supplements (kg)")+num("silageCost","Silage cost/kg (KES)")+num("otherCost","Other fodder cost/kg (KES)")+num("mealCost","Dairy meal cost/kg (KES)")+num("supplementCost","Supplement cost/kg (KES)")+'</div></div>';
 }
 function feedPending(){
@@ -1992,7 +1992,17 @@ document.addEventListener("click",e=>{
     case "goto-herd": state.section="farm"; state.tab="herd"; renderAll(); break;
     case "save-milk": saveMilk(); break;
     case "delete-allocation": deleteMilkAllocation(a.dataset.id); break;
-    case "edit-milk-row": { const inp=document.querySelector('#logbody input[data-cow="'+CSS.escape(a.dataset.id)+'"]'); if(inp){inp.focus();inp.select();} break; }
+    case "edit-milk-row": {
+      const row=a.closest(".row"), inp=row&&row.querySelector('input[data-cow]');
+      if(!row||!inp) break;
+      if(a.dataset.editing==="1"){
+        if(pendingChanges().length){ saveMilk(); }
+        else { inp.disabled=true; a.dataset.editing="0"; a.textContent="Edit log"; }
+      } else {
+        inp.disabled=false; a.dataset.editing="1"; a.textContent="Save log"; inp.focus(); inp.select();
+      }
+      break;
+    }
     case "add": openForm(null); break;
     case "edit": openForm(state.dlg.id); break;
     case "close": closeDlg(); break;
@@ -2016,7 +2026,18 @@ document.addEventListener("click",e=>{
     case "role-down": moveRole(a.dataset.id,1); break;
     case "remove-sale": removeSale(a.dataset.id); break;
     case "save-feed": saveFeed(); break;
-    case "edit-feed-row": { const inp=document.querySelector('#feedbody input[data-cow="'+CSS.escape(a.dataset.id)+'"]'); if(inp){inp.focus();inp.select();} break; }
+    case "edit-feed-row": {
+      const row=a.closest(".care"), inputs=row&&row.querySelectorAll('input[data-cow]');
+      if(!row||!inputs||!inputs.length) break;
+      if(a.dataset.editing==="1"){
+        if(feedPending().length){ saveFeed(); }
+        else { inputs.forEach(inp=>inp.disabled=true); a.dataset.editing="0"; a.textContent="Edit feed"; }
+      } else {
+        inputs.forEach(inp=>inp.disabled=false); a.dataset.editing="1"; a.textContent="Save feed";
+        const first=row.querySelector('input[data-cow]'); if(first){first.focus();first.select();}
+      }
+      break;
+    }
     case "staff-add": openStaffForm(null); break;
     case "staff-edit": openStaffForm(a.dataset.id); break;
     case "staff-ask-delete": state.dlg={mode:"staff-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
