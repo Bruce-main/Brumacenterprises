@@ -245,6 +245,7 @@ dialog::backdrop{background:rgba(10,20,14,.55)}
     <section id="view-daily" role="tabpanel" hidden></section>
     <section id="view-balances" role="tabpanel" hidden></section>
     <section id="view-farm" role="tabpanel" hidden></section>
+    <section id="view-costlog" role="tabpanel" hidden></section>
     <section id="view-summary" role="tabpanel" hidden></section>
     <section id="view-members" role="tabpanel" hidden></section>
   </main>
@@ -293,7 +294,7 @@ const state = {
   ready:false,
   cows:[], cereals:[], roles:[], milk:{}, milkPrices:{}, sales:[], loadedMonths:new Set(),
   settings:{milkPrice:70,milkStock:0},
-  salesDate:todayStr(), sale:{product:"milk",qty:"",time:""},
+  salesDate:todayStr(), sale:{product:"milk",qty:"",time:""}, editingAllocationId:null, costPeriod:"daily", costDate:todayStr(), costReport:null,
   feed:{}, feedDraft:{}, careDate:todayStr(),
   staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualWorkers:[], casualDate:todayStr(), casualDraft:{},
   members:{list:[],allowAdminSignup:true,loaded:false,loading:false,error:""},
@@ -566,11 +567,11 @@ function renderWho(){
     +'<button class="btn ghost small" data-act="logout">Log out</button>';
 }
 
-const VIEWS=["log","herd","feed","daily","balances","farm","summary","members"];
+const VIEWS=["log","herd","feed","daily","balances","farm","costlog","summary","members"];
 // Which page each section shows, and the label each tab takes in that section
 // (the "daily" and "balances" pages are shared, filtered to that section's products)
 const SECTION_TABS={
-  farm:[["log","Milk log"],["herd","Herd"],["feed","Feed"],["daily","Milk sales"],["balances","Milk balance"],["farm","Farm costs"]],
+  farm:[["log","Milk log"],["herd","Herd"],["feed","Feed"],["daily","Milk sales & use"],["balances","Milk balance"],["costlog","Cost log"],["farm","Farm costs"]],
   shop:[["balances","Products"],["daily","Sales"]]
 };
 function sectionOf(tab){ return tab==="summary"?"summary":tab==="members"?"members":state.section; }
@@ -605,6 +606,7 @@ function renderAll(){
   else if(state.tab==="daily") renderDaily();
   else if(state.tab==="balances") renderBalances();
   else if(state.tab==="farm") renderFarm();
+  else if(state.tab==="costlog") renderCostLog();
   else if(state.tab==="members") renderMembers();
   else renderSummary();
   if(state.dlg && ["detail","profile","member-card"].indexOf(state.dlg.mode)>=0) renderDialog();
@@ -906,6 +908,7 @@ async function saveMilk(){
       else { state.milk[k]=c.value; if(!(k in state.milkPrices)) state.milkPrices[k]=milkPrice(); }
       delete state.draft[date+"|"+c.id];
     });
+    if(date===todayStr()){ try{ await loadCore(); }catch(_){} }
     toast("Milk saved");
   }catch(e){ toast("Couldn't save the milk. "+friendly(e),true); }
   state.saving=false;
@@ -1005,7 +1008,7 @@ function renderFeedBody(){
     let ts=0,to=0,tm=0,tp=0,feedCost=0;
     for(const c of cows){ const f=feedFor(c.id,state.careDate); ts+=f.silage; to+=f.other; tm+=f.meal; tp+=f.supplement; feedCost+=f.silage*f.silageCost+f.other*f.otherCost+f.meal*f.mealCost+f.supplement*f.supplementCost; }
     html+='<div class="total"><div><div class="eq">Total for '+esc(fmtDate(state.careDate,{weekday:"short",day:"numeric",month:"short"}))+'</div>'
-      +'<div class="eq">'+fmtL(ts)+' kg silage, '+fmtL(to)+' kg other fodder, '+fmtL(tm)+' kg dairy meal, '+fmtL(tp)+' kg supplements</div></div>'
+      +'<div class="eq">'+fmtL(ts)+' kg silage, '+fmtL(to)+' kg other fodder, '+fmtL(tm)+' kg dairy meal, '+fmtL(tp)+' kg supplements</div>'+'<div class="eq">Estimated feed cost: <b>'+esc(fmtKES(feedCost))+'</b></div></div>'
       +'<button class="btn" id="savefeed" data-act="save-feed">Save feed</button></div>'
       +'<div class="error" id="feederr" role="alert" hidden></div>';
   }
@@ -1058,7 +1061,7 @@ function renderBalances(){
   const title=inShop?"Shop products":"Milk balance";
   const sub=inShop
     ? "What's in stock, and what each sells for. Sales lower these figures automatically."+(ms?"":" Admins keep the stock up to date.")
-    : "How much milk is ready to sell."+(ms?"":" Admins keep this up to date.");
+    : "Milk available is calculated automatically from cow production minus recorded non-sale use and milk sales. Only an admin can change the price.";
   let html='<div class="logbar"><div><h2>'+title+'</h2><p class="sub">'+sub+'</p></div>'
     +(ms&&inShop?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div>';
   if(!rows.length){
@@ -1069,7 +1072,7 @@ function renderBalances(){
       const out=r.qty<=0, attr='data-kind="'+r.kind+'" data-id="'+esc(r.id||"")+'"', uw=unitWord(r.unit);
       return '<div class="row"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
         +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+esc(fmtKES(r.price)+" a "+(r.kind==="milk"?"litre":uw)+(out?"":", worth "+fmtKES(r.qty*r.price)))+'</div>'
-        +(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':"")+'</div>'
+        +(r.kind==="milk"?(state.admin?'<div class="pactions"><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit price</button></div>':""):(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':""))+'</div>'
         +'<div class="entry"><div class="bal">'+fmtL(Math.max(0,r.qty))+' <small>'+r.unit+'</small></div>'+(out?'<span class="pill due">Out of stock</span>':"")+'</div></div>';
     }).join("")+'</div>';
   }
@@ -1099,26 +1102,23 @@ async function saveAddStock(){
 }
 
 function milkEditHTML(){
-  const ap=state.admin, ms=can("manage_stock");
-  return '<div class="dlg"><h2 style="margin-bottom:14px">Milk price and stock</h2><form id="milkeditform" novalidate><div class="grid2">'
-    +(ap?'<div class="field"><label for="m-price">Price per litre <span class="hint">(KES)</span></label><input type="number" id="m-price" inputmode="decimal" min="0" step="any" value="'+esc(milkPrice())+'"></div>':"")
-    +(ms?'<div class="field"><label for="m-qty">Quantity remaining <span class="hint">(litres)</span></label><input type="number" id="m-qty" inputmode="decimal" min="0" step="any" value="'+esc(state.settings.milkStock)+'"></div>':"")
-    +'</div><p class="sub" style="margin-top:12px">'+(ap?"A new price applies to new milk entries and sales from now on. Earlier ones keep the price they were made at. ":"")
-    +(ms?"Enter the litres you have now. Sales lower it automatically, so change it only to correct a count.":"")+'</p>'
+  const ap=state.admin;
+  return '<div class="dlg"><h2 style="margin-bottom:14px">Milk price</h2><form id="milkeditform" novalidate><div class="grid2">'
+    +(ap?'<div class="field"><label for="m-price">Price per litre <span class="hint">(KES)</span></label><input type="number" id="m-price" inputmode="decimal" min="0.01" step="any" value="'+esc(milkPrice())+'"></div>':'<p class="sub">Only an admin can change the milk price.</p>')
+    +'</div><p class="sub" style="margin-top:12px">Milk quantity is calculated automatically from daily cow production, recorded usage and milk sales. Only the price can be changed here.</p>'
     +'<div class="error" id="formerr" role="alert" hidden></div>'
-    +'<div class="actions"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Save</button></div></form></div>';
+    +'<div class="actions"><button type="button" class="btn ghost" data-act="close">Close</button>'+(ap?'<button type="submit" class="btn" id="formsave">Save price</button>':'')+'</div></form></div>';
 }
 async function saveMilkEdit(){
-  const pe=document.getElementById("m-price"), qe=document.getElementById("m-qty");
-  let price=null, qty=null;
-  if(pe){ price=parseFloat(pe.value); if(!(price>0&&price<=MAX_KG)) return showErr("formerr","Enter a price per litre above 0, for example 70."); }
-  if(qe){ qty=parseFloat(qe.value); if(!(qty>=0&&qty<=1e7)) return showErr("formerr","Enter the litres remaining, 0 or more."); }
+  const pe=document.getElementById("m-price");
+  if(!pe){ closeDlg(); return; }
+  const price=parseFloat(pe.value);
+  if(!(price>0&&price<=MAX_KG)) return showErr("formerr","Enter a price per litre above 0, for example 70.");
   document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
   try{
-    if(price!==null&&round2(price)!==round2(milkPrice())) await run(sb.rpc("set_milk_price",{p_price:round2(price)}));
-    if(qty!==null&&round2(qty)!==round2(state.settings.milkStock)) await run(sb.rpc("set_stock",{p_kind:"milk",p_cereal_id:null,p_qty:round2(qty)}));
-    await loadCore(); closeDlg(); toast("Milk price and stock saved"); scheduleRender();
-  }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,"Save"); }
+    if(round2(price)!==round2(milkPrice())) await run(sb.rpc("set_milk_price",{p_price:round2(price)}));
+    await loadCore(); closeDlg(); toast("Milk price saved"); scheduleRender();
+  }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,"Save price"); }
 }
 
 /* ----- Farm costs: staff, casual labour, land and inputs ----- */
@@ -1323,40 +1323,81 @@ function renderDaily(){
       +'<div class="field"><label for="s-time">Time of sale</label><input type="time" id="s-time"></div></div>'
       +'<div class="saleinfo" id="saleinfo"></div><div class="error" id="saleerr" role="alert" hidden></div>'
       +'<button type="submit" class="btn" id="salebtn">Record sale</button></form>'
-      +'<div id="salenote"></div><div class="salecard"><h3 class="sec" style="margin-top:0">Milk use and distribution</h3><p class="sub">Record spoilt milk, home/staff use, calf milk, co-op deliveries and direct sales.</p><form id="allocform" novalidate><div class="grid2"><div class="field"><label for="alloc-type">Destination</label><select id="alloc-type"><option value="spoilt">Spoilt milk</option><option value="home_staff">Home / staff use</option><option value="calves">Calves</option><option value="coop">Sold to co-op society</option><option value="direct">Sold directly to end user</option></select></div><div class="field"><label for="alloc-qty">Quantity (litres)</label><input id="alloc-qty" type="number" min="0.01" step="any" required></div><div class="field"><label for="alloc-price">Price per litre (KES)</label><input id="alloc-price" type="number" min="0" step="any" value="'+esc(milkPrice())+'"></div><div class="field"><label for="alloc-customer">Buyer / notes</label><input id="alloc-customer" type="text" maxlength="200" placeholder="Co-op, customer, or notes"></div></div><div class="error" id="allocerr" hidden></div><button class="btn" type="submit">Save milk allocation</button></form><div id="alloc-history"></div></div><div id="dailybody"></div>';
+      +'<div id="salenote"></div><div class="salecard"><h3 class="sec" style="margin-top:0">Milk use and distribution</h3><p class="sub">Record spoilt milk, home/staff use, calf milk, co-op deliveries and direct sales.</p><form id="allocform" novalidate><input type="hidden" id="alloc-id"><div class="grid2"><div class="field"><label for="alloc-type">Destination</label><select id="alloc-type"><option value="spoilt">Spoilt milk</option><option value="home_staff">Home / staff use</option><option value="calves">Calves</option><option value="coop">Sold to co-op society</option><option value="direct">Sold directly to end user</option></select></div><div class="field"><label for="alloc-qty">Quantity (litres)</label><input id="alloc-qty" type="number" min="0.01" step="any" required></div><div class="field"><label for="alloc-price">Price per litre (KES)</label><input id="alloc-price" type="number" min="0" step="any" value="'+esc(milkPrice())+'"'+(state.admin?"":" disabled")+'></div><div class="field"><label for="alloc-customer">Buyer / notes</label><input id="alloc-customer" type="text" maxlength="200" placeholder="Co-op, customer, or notes"></div></div><div class="error" id="allocerr" hidden></div><div class="pactions"><button class="btn" type="submit" id="alloc-save">Save milk allocation</button><button class="btn ghost" type="button" id="alloc-cancel" data-act="cancel-allocation-edit" hidden>Cancel edit</button></div></form><div id="milk-balance-summary" class="note" style="margin-top:12px"></div><div id="alloc-history"></div></div><div id="dailybody"></div>';
     $("#dailydate").value=state.salesDate;
     $("#s-qty").value=state.sale.qty; $("#s-time").value=state.sale.time;
     el.dataset.built=key;
   }
   ensureMonth(monthOf(state.salesDate));
   refreshSaleForm();
-  renderDailyBody(); loadMilkAllocations();
+  renderDailyBody(); loadMilkAllocations(); loadMilkBalanceSummary();
 }
 
 async function loadMilkAllocations(){
   const box=$("#alloc-history"); if(!box||!state.ready) return;
   try{
     const rows=await run(sb.from("milk_allocations").select("*").eq("allocation_date",state.salesDate).order("created_at",{ascending:false}));
-    box.innerHTML=rows.length?'<div class="scroll" style="margin-top:12px"><table><thead><tr><th>Destination</th><th>Litres</th><th>Price/L</th><th>Buyer / notes</th><th></th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(({spoilt:"Spoilt",home_staff:"Home/staff",calves:"Calves",coop:"Co-op",direct:"Direct sale"})[r.allocation_type]||r.allocation_type)+'</td><td>'+fmtL(Number(r.quantity_litres))+'</td><td>'+fmtKES(Number(r.price_per_litre))+'</td><td>'+esc(r.customer||r.notes||"—")+'</td><td><button class="btn ghost small" data-act="delete-allocation" data-id="'+esc(r.id)+'">Delete</button></td></tr>').join("")+'</tbody></table></div>':'<p class="sub" style="margin-top:12px">No milk allocations recorded for this date.</p>';
+    box.innerHTML=rows.length?'<div class="scroll" style="margin-top:12px"><table><thead><tr><th>Destination</th><th>Litres</th><th>Price/L</th><th>Buyer / notes</th><th>Actions</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(({spoilt:"Spoilt",home_staff:"Home/staff",calves:"Calves",coop:"Co-op",direct:"Direct sale"})[r.allocation_type]||r.allocation_type)+'</td><td>'+fmtL(Number(r.quantity_litres))+'</td><td>'+fmtKES(Number(r.price_per_litre))+'</td><td>'+esc(r.customer||r.notes||"—")+'</td><td><div class="pactions"><button class="btn ghost small" data-act="edit-allocation" data-id="'+esc(r.id)+'" data-type="'+esc(r.allocation_type)+'" data-qty="'+esc(r.quantity_litres)+'" data-price="'+esc(r.price_per_litre)+'" data-customer="'+esc(r.customer||"")+'">Edit</button><button class="btn danger small" data-act="delete-allocation" data-id="'+esc(r.id)+'">Delete</button></div></td></tr>').join('')+'</tbody></table></div>':'<p class="sub" style="margin-top:12px">No milk allocations recorded for this date.</p>';
   }catch(e){ box.innerHTML='<p class="sub">Milk allocation history is unavailable. Run the updated SQL setup first.</p>'; }
+}
+function resetAllocationForm(){
+  state.editingAllocationId=null;
+  const id=$("#alloc-id"), btn=$("#alloc-save"), cancel=$("#alloc-cancel");
+  if(id) id.value=""; if(btn) btn.textContent="Save milk allocation"; if(cancel) cancel.hidden=true;
+  const form=$("#allocform"); if(form) form.reset();
+  const price=$("#alloc-price"); if(price) price.value=String(milkPrice());
+}
+function editMilkAllocation(button){
+  state.editingAllocationId=button.dataset.id;
+  $("#alloc-id").value=button.dataset.id;
+  $("#alloc-type").value=button.dataset.type;
+  $("#alloc-qty").value=button.dataset.qty;
+  $("#alloc-price").value=button.dataset.price;
+  $("#alloc-customer").value=button.dataset.customer||"";
+  $("#alloc-save").textContent="Save changes"; $("#alloc-cancel").hidden=false;
+  $("#allocform").scrollIntoView({behavior:"smooth",block:"center"});
+}
+async function loadMilkBalanceSummary(){
+  const box=$("#milk-balance-summary"); if(!box||!state.ready) return;
+  try{
+    const d=state.salesDate;
+    const [milk,alloc,sales]=await Promise.all([
+      run(sb.from("milk_entries").select("litres").eq("entry_date",d)),
+      run(sb.from("milk_allocations").select("allocation_type,quantity_litres").eq("allocation_date",d)),
+      run(sb.from("sales").select("quantity").eq("product_kind","milk").eq("sold_on",d))
+    ]);
+    const produced=(milk||[]).reduce((a,r)=>a+Number(r.litres||0),0);
+    const used=(alloc||[]).filter(r=>["spoilt","home_staff","calves"].includes(r.allocation_type)).reduce((a,r)=>a+Number(r.quantity_litres||0),0);
+    const sold=(sales||[]).reduce((a,r)=>a+Number(r.quantity||0),0);
+    const available=Math.max(0,round2(produced-used-sold));
+    if(d===todayStr()) state.settings.milkStock=available;
+    box.innerHTML='<b>Milk balance for '+esc(fmtDate(d))+'</b><br>Produced by all cows: '+fmtL(produced)+' L · Spoilt / home-staff / calves: '+fmtL(used)+' L · Recorded milk sales: '+fmtL(sold)+' L<br><strong>Available to sell: '+fmtL(available)+' L</strong>';
+    if(d===todayStr()&&state.tab==="balances"&&state.section==="farm") renderBalances();
+  }catch(e){ box.textContent="Automatic milk balance is unavailable. Check the database permissions and SQL setup."; }
 }
 async function saveMilkAllocation(e){
   e.preventDefault();
   const type=$("#alloc-type").value, qty=Number($("#alloc-qty").value), price=Number($("#alloc-price").value), customer=$("#alloc-customer").value.trim(), err=$("#allocerr");
   if(!(qty>0)){err.textContent="Enter a quantity above zero.";err.hidden=false;return;}
   if(!(price>=0)){err.textContent="Enter a price of zero or more.";err.hidden=false;return;}
-  if(state.salesDate!==todayStr()){err.textContent="Allocations can only be recorded for today.";err.hidden=false;return;}
   err.hidden=true;
   try{
-    await run(sb.from("milk_allocations").insert({allocation_date:state.salesDate,allocation_type:type,quantity_litres:round2(qty),price_per_litre:round2(price),customer:customer||null,recorded_by:state.user.id}));
-    $("#alloc-qty").value=""; $("#alloc-customer").value="";
-    toast("Milk allocation saved"); await loadMilkAllocations();
+    const payload={allocation_date:state.salesDate,allocation_type:type,quantity_litres:round2(qty),price_per_litre:round2(price),customer:customer||null,recorded_by:state.user.id};
+    if(state.editingAllocationId){
+      await run(sb.from("milk_allocations").update({...payload,updated_at:new Date().toISOString()}).eq("id",state.editingAllocationId));
+      toast("Milk allocation updated");
+    }else{
+      await run(sb.from("milk_allocations").insert(payload));
+      toast("Milk allocation saved");
+    }
+    resetAllocationForm(); await loadMilkAllocations(); await loadMilkBalanceSummary();
   }catch(ex){err.textContent="Couldn't save allocation. "+friendly(ex);err.hidden=false;}
 }
 async function deleteMilkAllocation(id){
-  try{await run(sb.from("milk_allocations").delete().eq("id",id));toast("Allocation removed");await loadMilkAllocations();}
+  try{await run(sb.from("milk_allocations").delete().eq("id",id));toast("Allocation removed");await loadMilkAllocations();await loadMilkBalanceSummary();}
   catch(e){toast("Couldn't remove allocation. "+friendly(e),true);}
 }
+
 function refreshSaleForm(){
   const isToday=state.salesDate===todayStr();
   $("#saleform").hidden=!isToday;
@@ -1427,6 +1468,50 @@ async function removeSale(id){
   catch(e){ toast("Couldn't remove the sale. "+friendly(e),true); }
   try{ await loadCore(); await Promise.all(Array.from(state.loadedMonths).map(loadMonth)); }catch(e){}
   scheduleRender();
+}
+
+/* ----- Cost log: daily, weekly, monthly and annual input/labour costs ----- */
+function costRange(period, anchor){
+  const d=parseDate(anchor); let start=anchor,end=anchor;
+  if(period==="weekly"){
+    const offset=(d.getDay()+6)%7; start=addDays(anchor,-offset); end=addDays(start,6);
+  }else if(period==="monthly"){
+    start=anchor.slice(0,7)+"-01"; end=anchor.slice(0,7)+"-"+pad(daysInMonth(anchor.slice(0,7)));
+  }else if(period==="annual"){
+    start=d.getFullYear()+"-01-01"; end=d.getFullYear()+"-12-31";
+  }
+  if(end>todayStr()) end=todayStr();
+  return {start,end};
+}
+function renderCostLog(force){
+  const el=$("#view-costlog"); if(!el||!state.ready) return;
+  if(!el.querySelector("#costperiod")||force){
+    el.innerHTML='<div class="logbar"><div><h2>Cost log</h2><p class="sub">Review feed input and casual labour costs for a day, week, month or year. Feed costs are quantity used × saved unit cost.</p></div><div class="grid2" style="min-width:min(100%,360px)"><div class="field"><label for="costperiod">Period</label><select id="costperiod"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="annual">Annual</option></select></div><div class="field"><label for="costdate">Date in period</label><input type="date" id="costdate" max="'+todayStr()+'"></div></div></div><div id="cost-report"><div class="note">Loading costs…</div></div>';
+    $("#costperiod").value=state.costPeriod||"daily"; $("#costdate").value=state.costDate||todayStr();
+  }
+  loadCostReport();
+}
+async function loadCostReport(){
+  const box=$("#cost-report"); if(!box||!state.ready) return;
+  box.innerHTML='<div class="note">Loading costs…</div>';
+  const {start,end}=costRange(state.costPeriod,state.costDate||todayStr());
+  try{
+    const [feeds,workers]=await Promise.all([
+      fetchAll((a,b)=>sb.from("cow_feed").select("entry_date,silage_kg,other_fodder_kg,dairy_meal_kg,supplement_kg,silage_cost_per_kg,other_fodder_cost_per_kg,dairy_meal_cost_per_kg,supplement_cost_per_kg").gte("entry_date",start).lte("entry_date",end).order("entry_date").range(a,b)),
+      fetchAll((a,b)=>sb.from("casual_workers").select("work_date,daily_wage").gte("work_date",start).lte("work_date",end).order("work_date").range(a,b))
+    ]);
+    const days={}; const getDay=d=>days[d]||(days[d]={silage:0,fodder:0,meal:0,supplements:0,labor:0,total:0});
+    feeds.forEach(r=>{const x=getDay(r.entry_date);x.silage+=Number(r.silage_kg||0)*Number(r.silage_cost_per_kg||0);x.fodder+=Number(r.other_fodder_kg||0)*Number(r.other_fodder_cost_per_kg||0);x.meal+=Number(r.dairy_meal_kg||0)*Number(r.dairy_meal_cost_per_kg||0);x.supplements+=Number(r.supplement_kg||0)*Number(r.supplement_cost_per_kg||0);});
+    workers.forEach(r=>{getDay(r.work_date).labor+=Number(r.daily_wage||0);});
+    const rows=Object.keys(days).sort().map(d=>{const x=days[d];x.total=x.silage+x.fodder+x.meal+x.supplements+x.labor;return {date:d,...x};});
+    const sum=key=>rows.reduce((a,r)=>a+r[key],0); const total=sum("total");
+    const rangeLabel=start===end?fmtDate(start):fmtDate(start)+" – "+fmtDate(end);
+    box.innerHTML='<div class="note"><b>'+esc(rangeLabel)+'</b><br>Costs shown are based on saved feed records and casual worker wages. If a feed unit cost is zero, enter it on the Feed page and save that day again.</div>'
+      +'<div class="landgrid" style="margin-bottom:14px"><div><div class="meta">Total input & labour cost</div><div class="bal">'+fmtKES(total)+'</div></div><div><div class="meta">Days with recorded costs</div><div class="bal">'+rows.length+'</div></div></div>'
+      +'<div class="scroll"><table><thead><tr><th>Date</th><th>Silage</th><th>Other fodder</th><th>Dairy meal</th><th>Supplement</th><th>Casual labour</th><th>Total</th></tr></thead><tbody>'
+      +(rows.length?rows.map(r=>'<tr><td>'+esc(fmtDate(r.date))+'</td><td>'+fmtKES(r.silage)+'</td><td>'+fmtKES(r.fodder)+'</td><td>'+fmtKES(r.meal)+'</td><td>'+fmtKES(r.supplements)+'</td><td>'+fmtKES(r.labor)+'</td><td><b>'+fmtKES(r.total)+'</b></td></tr>').join(""):'<tr><td colspan="7" style="text-align:center">No feed or casual labour costs recorded for this period.</td></tr>')
+      +'</tbody><tfoot><tr><td>Total</td><td>'+fmtKES(sum("silage"))+'</td><td>'+fmtKES(sum("fodder"))+'</td><td>'+fmtKES(sum("meal"))+'</td><td>'+fmtKES(sum("supplements"))+'</td><td>'+fmtKES(sum("labor"))+'</td><td>'+fmtKES(total)+'</td></tr></tfoot></table></div>';
+  }catch(e){box.innerHTML='<div class="error">Could not load cost records. '+esc(friendly(e))+'</div>';}
 }
 
 /* ----- Members (admins only) ----- */
@@ -1992,6 +2077,8 @@ document.addEventListener("click",e=>{
     case "goto-herd": state.section="farm"; state.tab="herd"; renderAll(); break;
     case "save-milk": saveMilk(); break;
     case "delete-allocation": deleteMilkAllocation(a.dataset.id); break;
+    case "edit-allocation": editMilkAllocation(a); break;
+    case "cancel-allocation-edit": resetAllocationForm(); break;
     case "edit-milk-row": {
       const row=a.closest(".row"), inp=row&&row.querySelector('input[data-cow]');
       if(!row||!inp) break;
@@ -2097,8 +2184,9 @@ document.addEventListener("change",e=>{
   if(t.id==="dailydate"){
     if(!t.value){ t.value=state.salesDate; return; }
     state.salesDate=t.value>todayStr()?todayStr():t.value; t.value=state.salesDate;
-    ensureMonth(monthOf(state.salesDate)); refreshSaleForm(); renderDailyBody(); return;
+    resetAllocationForm(); ensureMonth(monthOf(state.salesDate)); refreshSaleForm(); renderDailyBody(); loadMilkAllocations(); loadMilkBalanceSummary(); return;
   }
+  if(t.id==="costperiod"||t.id==="costdate"){ if(t.id==="costperiod") state.costPeriod=t.value; else state.costDate=t.value||todayStr(); renderCostLog(true); return; }
   if(t.id==="feeddate"){
     if(!t.value){ t.value=state.careDate; return; }
     state.careDate=t.value>todayStr()?todayStr():t.value; t.value=state.careDate;
