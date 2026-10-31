@@ -537,6 +537,12 @@ async function loadCore(){
   state.staff=res[4].map(staffFromRow);
   if(res[5]) state.land={costPerAcre:Number(res[5].cost_per_acre),acresHired:Number(res[5].acres_hired)};
   await loadProfile();
+  // Force recalculation of today's milk stock so yesterday's leftover never
+  // appears as available when nothing has been recorded yet today.
+  try{
+    const stock=await run(sb.rpc("refresh_milk_stock"));
+    if(typeof stock==="number") state.settings.milkStock=stock;
+  }catch(e){ /* older database without the RPC: keep the value read above */ }
 }
 async function loadMonth(m){
   const start=m+"-01", end=m+"-"+pad(daysInMonth(m));
@@ -1098,7 +1104,7 @@ function renderBalances(){
   const title=inShop?"Shop products":"Milk balance";
   const sub=inShop
     ? "What's in stock, and what each sells for. Sales lower these figures automatically."+(ms?"":" Admins keep the stock up to date.")
-    : "Milk available is calculated automatically from cow production minus recorded non-sale use and milk sales. Only an admin can change the price.";
+    : "Milk available is calculated automatically from today's cow production minus all recorded allocations (spoilt, home/staff, calves, co-op, direct) and milk sales. Only an admin can change the price.";
   let html='<div class="logbar"><div><h2>'+title+'</h2><p class="sub">'+sub+'</p></div>'
     +(ms&&inShop?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div>';
   if(!rows.length){
@@ -1398,17 +1404,26 @@ async function loadMilkBalanceSummary(){
   const box=$("#milk-balance-summary"); if(!box||!state.ready) return;
   try{
     const d=state.salesDate;
+    // When viewing today, force the database stock to match today's production
+    // minus all allocations and sales (prevents yesterday's leftover showing).
+    if(d===todayStr()){
+      try{
+        const stock=await run(sb.rpc("refresh_milk_stock"));
+        if(typeof stock==="number") state.settings.milkStock=stock;
+      }catch(e){}
+    }
     const [milk,alloc,sales]=await Promise.all([
       run(sb.from("milk_entries").select("litres").eq("entry_date",d)),
       run(sb.from("milk_allocations").select("allocation_type,quantity_litres").eq("allocation_date",d)),
       run(sb.from("sales").select("quantity").eq("product_kind","milk").eq("sold_on",d))
     ]);
     const produced=(milk||[]).reduce((a,r)=>a+Number(r.litres||0),0);
-    const used=(alloc||[]).filter(r=>["spoilt","home_staff","calves"].includes(r.allocation_type)).reduce((a,r)=>a+Number(r.quantity_litres||0),0);
+    // All allocation types (including co-op and direct) take milk out of stock
+    const used=(alloc||[]).reduce((a,r)=>a+Number(r.quantity_litres||0),0);
     const sold=(sales||[]).reduce((a,r)=>a+Number(r.quantity||0),0);
     const available=Math.max(0,round2(produced-used-sold));
     if(d===todayStr()) state.settings.milkStock=available;
-    box.innerHTML='<b>Milk balance for '+esc(fmtDate(d))+'</b><br>Produced by all cows: '+fmtL(produced)+' L · Spoilt / home-staff / calves: '+fmtL(used)+' L · Recorded milk sales: '+fmtL(sold)+' L<br><strong>Available to sell: '+fmtL(available)+' L</strong>';
+    box.innerHTML='<b>Milk balance for '+esc(fmtDate(d))+'</b><br>Produced by all cows: '+fmtL(produced)+' L · Allocated / used: '+fmtL(used)+' L · Recorded milk sales: '+fmtL(sold)+' L<br><strong>Available to sell: '+fmtL(available)+' L</strong>';
     if(d===todayStr()&&state.tab==="balances"&&state.section==="farm") renderBalances();
   }catch(e){ box.textContent="Automatic milk balance is unavailable. Check the database permissions and SQL setup."; }
 }
