@@ -6,7 +6,7 @@
 <title>Brumac Enterprises</title>
 <meta name="theme-color" content="#2E7D5B">
 <meta name="description" content="Herd records, daily milk log and cereal sales for the farm.">
-<link rel="icon" href="bmr.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%84%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
@@ -336,6 +336,7 @@ const state = {
   staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualWorkers:[], casualDate:todayStr(), casualDraft:{},
   members:{list:[],allowAdminSignup:true,loaded:false,loading:false,error:""},
   section:"farm", tab:"log", date:todayStr(), month:todayStr().slice(0,7),
+  shopQuery:"",
   draft:{}, saving:false, dlg:null
 };
 
@@ -837,6 +838,7 @@ function resetToLogin(){
   state.feed={}; state.feedDraft={}; state.careDate=todayStr();
   state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.costs=[]; state.casual={}; state.casualWorkers=[]; state.casualDate=todayStr(); state.casualDraft={};
   state.members={list:[],allowAdminSignup:true,loaded:false,loading:false,error:""};
+  state.shopQuery="";
   state.draft={}; state.section="farm"; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
   renderAll();
 }
@@ -1099,25 +1101,35 @@ function findStock(kind,id){ return allStockRows().find(r=>r.kind===kind&&(r.id|
 function renderBalances(){
   const el=$("#view-balances");
   if(!state.ready){ el.innerHTML=""; return; }
-  const inShop=state.section==="shop", ms=can("manage_stock"), showPrice=state.admin, rows=stockRows();
-  let total=0; if(showPrice) rows.forEach(r=>{ total+=Math.max(0,r.qty)*r.price; });
+  const inShop=state.section==="shop", ms=can("manage_stock");
+  let rows=stockRows();
+  // Search filter (shop products only)
+  if(inShop&&state.shopQuery){
+    const q=state.shopQuery.trim().toLowerCase();
+    if(q) rows=rows.filter(r=>String(r.name).toLowerCase().includes(q));
+  }
+  let total=0; rows.forEach(r=>{ total+=Math.max(0,r.qty)*r.price; });
   const title=inShop?"Shop products":"Milk balance";
   const sub=inShop
-    ? (showPrice
-        ? "What's in stock, and what each sells for. Sales lower these figures automatically."+(ms?"":" Admins keep the stock up to date.")
-        : "What's in stock. Selling prices are only shown to admins. Sales lower these figures automatically.")
+    ? "What's in stock, and what each sells for. Sales lower these figures automatically."+(ms?"":" Admins keep the stock up to date.")
     : "Milk available is calculated automatically from today's cow production minus all recorded allocations (spoilt, home/staff, calves, co-op, direct) and milk sales. Only an admin can change the price.";
   let html='<div class="logbar"><div><h2>'+title+'</h2><p class="sub">'+sub+'</p></div>'
     +(ms&&inShop?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div>';
-  if(!rows.length){
+  if(inShop){
+    html+='<div class="field" style="margin-bottom:14px"><label for="shop-search">Search products</label>'
+      +'<input type="search" id="shop-search" placeholder="Type a product name…" value="'+esc(state.shopQuery)+'" autocomplete="off"></div>';
+  }
+  if(!stockRows().length){
     html+='<div class="ledger"><div class="empty"><p>No products have been added yet.</p>'+(ms?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div></div>';
+  } else if(!rows.length){
+    html+='<div class="ledger"><div class="empty"><p>No products match “'+esc(state.shopQuery.trim())+'”.</p></div></div>';
   } else {
-    if(showPrice) html+='<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>';
+    // Everyone sees selling price; admins also see total stock value
+    if(state.admin) html+='<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>';
     html+='<div class="ledger">'+rows.map(r=>{
       const out=r.qty<=0, attr='data-kind="'+r.kind+'" data-id="'+esc(r.id||"")+'"', uw=unitWord(r.unit);
-      const priceLine=showPrice
-        ? esc(fmtKES(r.price)+" a "+(r.kind==="milk"?"litre":uw)+(out?"":", worth "+fmtKES(r.qty*r.price)))
-        : (out?"":"In stock");
+      const priceLine=esc(fmtKES(r.price)+" a "+(r.kind==="milk"?"litre":uw))
+        +(state.admin&&!out?", worth "+esc(fmtKES(r.qty*r.price)):"");
       return '<div class="row"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
         +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+priceLine+'</div>'
         +(r.kind==="milk"?(state.admin?'<div class="pactions"><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit price</button></div>':""):(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':""))+'</div>'
@@ -1477,13 +1489,8 @@ function updateSaleInfo(){
   const p=selectedProduct(); if(!p){ info.textContent=""; return; }
   const n=parseFloat(state.sale.qty), word=unitWord(p.unit);
   $("#s-unit").textContent="("+word+")";
-  if(state.admin){
-    info.innerHTML=esc(fmtKES(p.price)+" a "+word+". ")+(p.qty>0?esc(fmtL(p.qty)+" "+p.unit+" left in stock."):"Out of stock.")
-      +(isFinite(n)&&n>0?' Amount: <b>'+esc(fmtKES(n*p.price))+'</b>':"");
-  } else {
-    info.innerHTML=(p.qty>0?esc(fmtL(p.qty)+" "+p.unit+" left in stock."):"Out of stock.")
-      +(isFinite(n)&&n>0?' Quantity: <b>'+esc(fmtL(n))+' '+word+'</b>':"");
-  }
+  info.innerHTML=esc(fmtKES(p.price)+" a "+word+". ")+(p.qty>0?esc(fmtL(p.qty)+" "+p.unit+" left in stock."):"Out of stock.")
+    +(isFinite(n)&&n>0?' Amount: <b>'+esc(fmtKES(n*p.price))+'</b>':"");
 }
 function renderDailyBody(){
   const body=$("#dailybody"); if(!body) return;
@@ -1498,25 +1505,17 @@ function renderDailyBody(){
     const key=x.kind==="milk"?"milk":x.cerealId;
     const a=agg[key]||(agg[key]={name:productName(x),unit:productUnit(x),qty:0,amt:0}); a.qty+=x.qty; a.amt+=amt;
   });
-  let html='<p class="sumline">Sales on '+esc(label)+': '+(state.admin?'<b>'+esc(fmtKES(total))+'</b> from ':"")
+  let html='<p class="sumline">Sales on '+esc(label)+': <b>'+esc(fmtKES(total))+'</b> from '
     +day.length+(day.length===1?" sale":" sales")+'.</p>';
   html+='<h3 class="sec" style="margin-top:0">Sales by time</h3><div class="ledger">'+day.map(x=>{
     const unit=productUnit(x), nm=productName(x);
     const receiptBtn=x.receipt?'<button class="btn ghost small" data-act="view-receipt" data-path="'+esc(x.receipt)+'">Receipt</button>':"";
-    const priceMeta=state.admin?('at '+esc(fmtKES(x.p))+' a '+unit):"";
-    const receiptMeta=x.receipt?(priceMeta?" · ":"")+"receipt attached":"";
-    return '<div class="sale"><div><div class="nm">'+esc(fmtClock(x.ts))+', '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'</div><div class="meta">'+priceMeta+receiptMeta+'</div></div>'
-      +'<div class="saleamt">'+(state.admin?esc(fmtKES(x.qty*x.p)):"")+receiptBtn+(can("remove_sales")?'<button class="btn ghost small" data-act="remove-sale" data-id="'+esc(x.id)+'" aria-label="Remove sale of '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'">Remove</button>':"")+'</div></div>';
+    return '<div class="sale"><div><div class="nm">'+esc(fmtClock(x.ts))+', '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'</div><div class="meta">at '+esc(fmtKES(x.p))+' a '+unit+(x.receipt?" · receipt attached":"")+'</div></div>'
+      +'<div class="saleamt">'+esc(fmtKES(x.qty*x.p))+receiptBtn+(can("remove_sales")?'<button class="btn ghost small" data-act="remove-sale" data-id="'+esc(x.id)+'" aria-label="Remove sale of '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'">Remove</button>':"")+'</div></div>';
   }).join("")+'</div>';
-  if(state.admin){
-    html+='<h3 class="sec">Totals by product</h3><div class="scroll"><table><thead><tr><th>Product</th><th>Quantity sold</th><th>Amount</th></tr></thead><tbody>'
-      +Object.keys(agg).map(k=>{ const a=agg[k]; return '<tr><td>'+esc(a.name)+'</td><td>'+fmtL(a.qty)+' '+a.unit+'</td><td>'+fmtKES(a.amt)+'</td></tr>'; }).join("")
-      +'</tbody><tfoot><tr><td>Total sales</td><td></td><td>'+fmtKES(total)+'</td></tr></tfoot></table></div>';
-  } else {
-    html+='<h3 class="sec">Totals by product</h3><div class="scroll"><table><thead><tr><th>Product</th><th>Quantity sold</th></tr></thead><tbody>'
-      +Object.keys(agg).map(k=>{ const a=agg[k]; return '<tr><td>'+esc(a.name)+'</td><td>'+fmtL(a.qty)+' '+a.unit+'</td></tr>'; }).join("")
-      +'</tbody></table></div>';
-  }
+  html+='<h3 class="sec">Totals by product</h3><div class="scroll"><table><thead><tr><th>Product</th><th>Quantity sold</th><th>Amount</th></tr></thead><tbody>'
+    +Object.keys(agg).map(k=>{ const a=agg[k]; return '<tr><td>'+esc(a.name)+'</td><td>'+fmtL(a.qty)+' '+a.unit+'</td><td>'+fmtKES(a.amt)+'</td></tr>'; }).join("")
+    +'</tbody><tfoot><tr><td>Total sales</td><td></td><td>'+fmtKES(total)+'</td></tr></tfoot></table></div>';
   body.innerHTML=html;
 }
 async function recordSaleFromForm(){
@@ -2299,6 +2298,12 @@ document.addEventListener("input",e=>{
     const n=(parseFloat(casualDraftVal("count"))||0)*(parseFloat(casualDraftVal("wage"))||0), tot=$("#casualtotal");
     if(tot) tot.textContent = n>0 ? "Total for the day: "+fmtKES(n) : "";
     const er=$("#casualerr"); if(er) er.hidden=true; return;
+  }
+  if(t.id==="shop-search"){
+    state.shopQuery=t.value;
+    renderBalances();
+    const s=$("#shop-search"); if(s){ s.focus(); try{ s.setSelectionRange(s.value.length,s.value.length); }catch(e){} }
+    return;
   }
 });
 document.addEventListener("change",e=>{
