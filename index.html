@@ -75,7 +75,25 @@ h2{font:400 23px/1.2 var(--serif);letter-spacing:-.01em}
 .logbar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
 .field label{display:block;font-size:14px;font-weight:600;margin-bottom:5px}
 .field .hint{font-weight:400;color:var(--ink-soft)}
-input[type=date],input[type=text],input[type=email],input[type=number],input[type=password],input[type=time],select,textarea{width:100%;padding:10px 13px;border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--surface);min-height:44px;transition:border-color .15s ease,box-shadow .15s ease}
+input[type=date],input[type=text],input[type=email],input[type=number],input[type=password],input[type=time],input[type=search],select,textarea{width:100%;padding:10px 13px;border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--surface);min-height:44px;transition:border-color .15s ease,box-shadow .15s ease}
+.searchbar{position:relative;margin-bottom:16px}
+.searchbar input[type=search]{
+  width:100%;min-height:48px;padding:12px 44px 12px 44px;border:1px solid var(--line);
+  border-radius:999px;background:var(--surface);box-shadow:var(--shadow-sm);
+  font-size:15px;transition:border-color .15s ease,box-shadow .15s ease;
+}
+.searchbar input[type=search]::placeholder{color:var(--ink-soft)}
+.searchbar input[type=search]:hover{border-color:var(--edge)}
+.searchbar input[type=search]:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--ring)}
+.searchbar .s-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--ink-soft);pointer-events:none}
+.searchbar .s-clear{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  width:32px;height:32px;border:0;border-radius:50%;background:var(--surface-2);
+  color:var(--ink-soft);font-size:18px;line-height:1;cursor:pointer;display:none;
+  align-items:center;justify-content:center;padding:0;
+}
+.searchbar .s-clear:hover{background:var(--line);color:var(--ink)}
+.searchbar.has-query .s-clear{display:inline-flex}
 textarea{min-height:78px;resize:vertical}
 input:hover:not(:focus),select:hover:not(:focus),textarea:hover:not(:focus){border-color:var(--ink-soft)}
 input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--ring)}
@@ -968,30 +986,48 @@ function cowRowHTML(c){
     +'<div><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div></div>'
     +'<div class="tags">'+statusPill(c)+dueChip(c)+'</div></button>';
 }
+function herdSearchHTML(){
+  const q=state.herdQuery||"";
+  return '<div class="searchbar'+(q?' has-query':'')+'" id="herd-searchbar">'
+    +'<svg class="s-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'
+    +'<input type="search" id="herd-search" placeholder="Search by name, tag or breed…" value="'+esc(q)+'" autocomplete="off" enterkeyhint="search">'
+    +'<button type="button" class="s-clear" data-act="clear-herd-search" aria-label="Clear search">×</button></div>';
+}
+function filteredHerdCows(){
+  let cows=sortedCows(state.cows);
+  const q=(state.herdQuery||"").trim().toLowerCase();
+  if(q) cows=cows.filter(c=>[c.name,c.tag,c.breed,c.status,c.bull,c.notes,c.health].join(" ").toLowerCase().includes(q));
+  return cows;
+}
+function renderHerdList(){
+  const list=$("#herd-list"); if(!list) return;
+  if(!state.cows.length){
+    list.innerHTML='<div class="ledger"><div class="empty"><p>'+(can("edit_herd")?"No cows yet. Add your first cow to start the herd book.":"No cows have been added yet.")+'</p></div></div>';
+    return;
+  }
+  const cows=filteredHerdCows();
+  if(!cows.length){
+    list.innerHTML='<div class="ledger"><div class="empty"><p>No cows match “'+esc((state.herdQuery||"").trim())+'”.</p></div></div>';
+    return;
+  }
+  list.innerHTML='<div class="ledger">'+cows.map(cowRowHTML).join("")+'</div>';
+}
 function renderHerd(){
   const el=$("#view-herd");
   if(!state.ready){ el.innerHTML=""; return; }
-  let cows=sortedCows(state.cows);
-  const q=(state.herdQuery||"").trim().toLowerCase();
-  if(q){
-    cows=cows.filter(c=>{
-      const hay=[c.name,c.tag,c.breed,c.status,c.bull,c.notes,c.health].join(" ").toLowerCase();
-      return hay.includes(q);
-    });
-  }
-  let html='<div class="logbar"><div><h2>Herd</h2><p class="sub">'
-    +(can("edit_herd")?"You can add and edit cow records.":"Cow records are read-only. Ask an admin to change them.")
-    +'</p></div>'+(can("edit_herd")?'<button class="btn" data-act="add">Add cow</button>':"")+'</div>';
-  html+='<div class="field" style="margin-bottom:14px"><label for="herd-search">Search herd</label>'
-    +'<input type="search" id="herd-search" placeholder="Name, tag, breed…" value="'+esc(state.herdQuery||"")+'" autocomplete="off"></div>';
-  if(!state.cows.length){
-    html+='<div class="ledger"><div class="empty"><p>'+(can("edit_herd")?"No cows yet. Add your first cow to start the herd book.":"No cows have been added yet.")+'</p></div></div>';
-  } else if(!cows.length){
-    html+='<div class="ledger"><div class="empty"><p>No cows match “'+esc(state.herdQuery.trim())+'”.</p></div></div>';
+  // Keep search bar mounted so typing is not interrupted
+  if(!el.querySelector("#herd-search")){
+    el.innerHTML='<div class="logbar"><div><h2>Herd</h2><p class="sub">'
+      +(can("edit_herd")?"You can add and edit cow records.":"Cow records are read-only. Ask an admin to change them.")
+      +'</p></div>'+(can("edit_herd")?'<button class="btn" data-act="add">Add cow</button>':"")+'</div>'
+      +herdSearchHTML()+'<div id="herd-list"></div>';
   } else {
-    html+='<div class="ledger">'+cows.map(cowRowHTML).join("")+'</div>';
+    const bar=$("#herd-searchbar");
+    if(bar) bar.classList.toggle("has-query", !!(state.herdQuery||"").trim());
+    const inp=$("#herd-search");
+    if(inp && document.activeElement!==inp && inp.value!==(state.herdQuery||"")) inp.value=state.herdQuery||"";
   }
-  el.innerHTML=html;
+  renderHerdList();
 }
 
 /* ----- Feed: fodder, dairy meal and supplements ----- */
@@ -1005,6 +1041,12 @@ function renderFeed(){
     $("#feeddate").value=state.careDate;
   }
   ensureMonth(monthOf(state.careDate));
+  // While a row is open for editing, do not rebuild the inputs (that was
+  // stealing focus and making typing impossible).
+  if(Object.keys(state.feedEditing).length){
+    updateFeedButton();
+    return;
+  }
   renderFeedBody();
 }
 function feedValue(cowId,field){
@@ -1097,6 +1139,22 @@ function updateFeedButton(){
   const b=$("#savefeed"); if(!b) return;
   b.disabled=state.saving||feedPending().length===0; b.textContent=state.saving?"Saving…":"Save feed";
 }
+function updateFeedTotals(){
+  const box=$("#feedbody .total"); if(!box) return;
+  const cows=sortedCows(state.cows);
+  let ts=0,to=0,tm=0,tp=0,feedCost=0;
+  for(const c of cows){
+    const f=feedFor(c.id,state.careDate);
+    const n=field=>{ const k=state.careDate+"|"+c.id+"|"+field; return k in state.feedDraft ? (parseFloat(state.feedDraft[k])||0) : (f[field]||0); };
+    const silage=n("silage"), other=n("other"), meal=n("meal"), supplement=n("supplement");
+    const silageCost=n("silageCost"), otherCost=n("otherCost"), mealCost=n("mealCost"), supplementCost=n("supplementCost");
+    ts+=silage; to+=other; tm+=meal; tp+=supplement;
+    feedCost+=silage*silageCost+other*otherCost+meal*mealCost+supplement*supplementCost;
+  }
+  const eq=box.querySelectorAll(".eq");
+  if(eq[1]) eq[1].textContent=fmtL(ts)+" kg silage, "+fmtL(to)+" kg other fodder, "+fmtL(tm)+" kg dairy meal, "+fmtL(tp)+" kg supplements";
+  if(eq[2]) eq[2].innerHTML="Estimated feed cost: <b>"+esc(fmtKES(feedCost))+"</b>";
+}
 async function saveFeed(){
   const errEl=$("#feederr"), err=validateFeed();
   if(err){ errEl.textContent=err; errEl.hidden=false; return; }
@@ -1131,45 +1189,69 @@ function stockRows(){
   return allStockRows().filter(r=>state.section==="farm"?r.kind==="milk":r.kind!=="milk");
 }
 function findStock(kind,id){ return allStockRows().find(r=>r.kind===kind&&(r.id||"")===(id||"")); }
+function shopSearchHTML(){
+  const q=state.shopQuery||"";
+  return '<div class="searchbar'+(q?' has-query':'')+'" id="shop-searchbar">'
+    +'<svg class="s-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'
+    +'<input type="search" id="shop-search" placeholder="Search products…" value="'+esc(q)+'" autocomplete="off" enterkeyhint="search">'
+    +'<button type="button" class="s-clear" data-act="clear-shop-search" aria-label="Clear search">×</button></div>';
+}
+function filteredShopRows(){
+  let rows=stockRows();
+  if(state.section==="shop"){
+    const q=(state.shopQuery||"").trim().toLowerCase();
+    if(q) rows=rows.filter(r=>String(r.name).toLowerCase().includes(q));
+  }
+  return rows;
+}
+function renderShopList(){
+  const list=$("#bal-list"); if(!list) return;
+  const inShop=state.section==="shop", ms=can("manage_stock"), rows=filteredShopRows();
+  let total=0; rows.forEach(r=>{ total+=Math.max(0,r.qty)*r.price; });
+  if(!stockRows().length){
+    list.innerHTML='<div class="ledger"><div class="empty"><p>No products have been added yet.</p>'+(ms&&inShop?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div></div>';
+    return;
+  }
+  if(!rows.length){
+    list.innerHTML='<div class="ledger"><div class="empty"><p>No products match “'+esc((state.shopQuery||"").trim())+'”.</p></div></div>';
+    return;
+  }
+  let html=(state.admin&&inShop)?'<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>':"";
+  if(state.admin&&!inShop){
+    html='<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>';
+  }
+  html+='<div class="ledger">'+rows.map(r=>{
+    const out=r.qty<=0, attr='data-kind="'+r.kind+'" data-id="'+esc(r.id||"")+'"', uw=unitWord(r.unit);
+    const priceLine=esc(fmtKES(r.price)+" a "+(r.kind==="milk"?"litre":uw))
+      +(state.admin&&!out?", worth "+esc(fmtKES(r.qty*r.price)):"");
+    return '<div class="row"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
+      +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+priceLine+'</div>'
+      +(r.kind==="milk"?(state.admin?'<div class="pactions"><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit price</button></div>':""):(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':""))+'</div>'
+      +'<div class="entry"><div class="bal">'+fmtL(Math.max(0,r.qty))+' <small>'+r.unit+'</small></div>'+(out?'<span class="pill due">Out of stock</span>':"")+'</div></div>';
+  }).join("")+'</div>';
+  list.innerHTML=html;
+}
 function renderBalances(){
   const el=$("#view-balances");
   if(!state.ready){ el.innerHTML=""; return; }
   const inShop=state.section==="shop", ms=can("manage_stock");
-  let rows=stockRows();
-  // Search filter (shop products only)
-  if(inShop&&state.shopQuery){
-    const q=state.shopQuery.trim().toLowerCase();
-    if(q) rows=rows.filter(r=>String(r.name).toLowerCase().includes(q));
-  }
-  let total=0; rows.forEach(r=>{ total+=Math.max(0,r.qty)*r.price; });
   const title=inShop?"Shop products":"Milk balance";
   const sub=inShop
     ? "What's in stock, and what each sells for. Sales lower these figures automatically."+(ms?"":" Admins keep the stock up to date.")
     : "Milk available is calculated automatically from today's cow production minus all recorded allocations (spoilt, home/staff, calves, co-op, direct) and milk sales. Only an admin can change the price.";
-  let html='<div class="logbar"><div><h2>'+title+'</h2><p class="sub">'+sub+'</p></div>'
-    +(ms&&inShop?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div>';
-  if(inShop){
-    html+='<div class="field" style="margin-bottom:14px"><label for="shop-search">Search products</label>'
-      +'<input type="search" id="shop-search" placeholder="Type a product name…" value="'+esc(state.shopQuery)+'" autocomplete="off"></div>';
+  const shellKey=inShop?"shop":"farm-bal";
+  if(el.dataset.shell!==shellKey){
+    el.dataset.shell=shellKey;
+    el.innerHTML='<div class="logbar"><div><h2>'+title+'</h2><p class="sub">'+sub+'</p></div>'
+      +(ms&&inShop?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div>'
+      +(inShop?shopSearchHTML():"")+'<div id="bal-list"></div>';
+  } else if(inShop){
+    const bar=$("#shop-searchbar");
+    if(bar) bar.classList.toggle("has-query", !!(state.shopQuery||"").trim());
+    const inp=$("#shop-search");
+    if(inp && document.activeElement!==inp && inp.value!==(state.shopQuery||"")) inp.value=state.shopQuery||"";
   }
-  if(!stockRows().length){
-    html+='<div class="ledger"><div class="empty"><p>No products have been added yet.</p>'+(ms?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div></div>';
-  } else if(!rows.length){
-    html+='<div class="ledger"><div class="empty"><p>No products match “'+esc(state.shopQuery.trim())+'”.</p></div></div>';
-  } else {
-    // Everyone sees selling price; admins also see total stock value
-    if(state.admin) html+='<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>';
-    html+='<div class="ledger">'+rows.map(r=>{
-      const out=r.qty<=0, attr='data-kind="'+r.kind+'" data-id="'+esc(r.id||"")+'"', uw=unitWord(r.unit);
-      const priceLine=esc(fmtKES(r.price)+" a "+(r.kind==="milk"?"litre":uw))
-        +(state.admin&&!out?", worth "+esc(fmtKES(r.qty*r.price)):"");
-      return '<div class="row"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
-        +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+priceLine+'</div>'
-        +(r.kind==="milk"?(state.admin?'<div class="pactions"><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit price</button></div>':""):(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':""))+'</div>'
-        +'<div class="entry"><div class="bal">'+fmtL(Math.max(0,r.qty))+' <small>'+r.unit+'</small></div>'+(out?'<span class="pill due">Out of stock</span>':"")+'</div></div>';
-    }).join("")+'</div>';
-  }
-  el.innerHTML=html;
+  renderShopList();
 }
 
 function stockAddHTML(kind,id){
@@ -2295,6 +2377,16 @@ document.addEventListener("click",e=>{
     case "cost-add": openCostForm(); break;
     case "cost-delete": deleteCost(a.dataset.id); break;
     case "refresh-costlog": loadCostReport(); break;
+    case "clear-shop-search":
+      state.shopQuery="";
+      { const inp=$("#shop-search"); if(inp) inp.value=""; const bar=$("#shop-searchbar"); if(bar) bar.classList.remove("has-query"); }
+      renderShopList();
+      break;
+    case "clear-herd-search":
+      state.herdQuery="";
+      { const inp=$("#herd-search"); if(inp) inp.value=""; const bar=$("#herd-searchbar"); if(bar) bar.classList.remove("has-query"); }
+      renderHerdList();
+      break;
     case "save-casual": saveCasual(); break;
     case "casual-edit": editCasualWorker(a.dataset.id); break;
     case "casual-delete": deleteCasualWorker(a.dataset.id); break;
@@ -2325,7 +2417,9 @@ document.addEventListener("input",e=>{
   if(fi){
     state.feedDraft[state.careDate+"|"+fi.dataset.cow+"|"+fi.dataset.field]=fi.value;
     const er=$("#feederr"); if(er) er.hidden=true;
-    updateFeedButton(); return;
+    updateFeedButton();
+    updateFeedTotals();
+    return;
   }
   if(t.id==="casual-count"||t.id==="casual-wage"){
     state.casualDraft[state.casualDate+":"+(t.id==="casual-count"?"count":"wage")]=t.value;
@@ -2335,14 +2429,16 @@ document.addEventListener("input",e=>{
   }
   if(t.id==="shop-search"){
     state.shopQuery=t.value;
-    renderBalances();
-    const s=$("#shop-search"); if(s){ s.focus(); try{ s.setSelectionRange(s.value.length,s.value.length); }catch(e){} }
+    const bar=$("#shop-searchbar");
+    if(bar) bar.classList.toggle("has-query", !!t.value.trim());
+    renderShopList();
     return;
   }
   if(t.id==="herd-search"){
     state.herdQuery=t.value;
-    renderHerd();
-    const s=$("#herd-search"); if(s){ s.focus(); try{ s.setSelectionRange(s.value.length,s.value.length); }catch(e){} }
+    const bar=$("#herd-searchbar");
+    if(bar) bar.classList.toggle("has-query", !!t.value.trim());
+    renderHerdList();
     return;
   }
 });
