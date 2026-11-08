@@ -336,7 +336,8 @@ const state = {
   staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualWorkers:[], casualDate:todayStr(), casualDraft:{},
   members:{list:[],allowAdminSignup:true,loaded:false,loading:false,error:""},
   section:"farm", tab:"log", date:todayStr(), month:todayStr().slice(0,7),
-  shopQuery:"",
+  shopQuery:"", herdQuery:"",
+  feedEditing:{},
   draft:{}, saving:false, dlg:null
 };
 
@@ -838,7 +839,7 @@ function resetToLogin(){
   state.feed={}; state.feedDraft={}; state.careDate=todayStr();
   state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.costs=[]; state.casual={}; state.casualWorkers=[]; state.casualDate=todayStr(); state.casualDraft={};
   state.members={list:[],allowAdminSignup:true,loaded:false,loading:false,error:""};
-  state.shopQuery="";
+  state.shopQuery=""; state.herdQuery=""; state.feedEditing={};
   state.draft={}; state.section="farm"; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
   renderAll();
 }
@@ -970,12 +971,23 @@ function cowRowHTML(c){
 function renderHerd(){
   const el=$("#view-herd");
   if(!state.ready){ el.innerHTML=""; return; }
-  const cows=sortedCows(state.cows);
+  let cows=sortedCows(state.cows);
+  const q=(state.herdQuery||"").trim().toLowerCase();
+  if(q){
+    cows=cows.filter(c=>{
+      const hay=[c.name,c.tag,c.breed,c.status,c.bull,c.notes,c.health].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }
   let html='<div class="logbar"><div><h2>Herd</h2><p class="sub">'
     +(can("edit_herd")?"You can add and edit cow records.":"Cow records are read-only. Ask an admin to change them.")
     +'</p></div>'+(can("edit_herd")?'<button class="btn" data-act="add">Add cow</button>':"")+'</div>';
-  if(!cows.length){
+  html+='<div class="field" style="margin-bottom:14px"><label for="herd-search">Search herd</label>'
+    +'<input type="search" id="herd-search" placeholder="Name, tag, breed…" value="'+esc(state.herdQuery||"")+'" autocomplete="off"></div>';
+  if(!state.cows.length){
     html+='<div class="ledger"><div class="empty"><p>'+(can("edit_herd")?"No cows yet. Add your first cow to start the herd book.":"No cows have been added yet.")+'</p></div></div>';
+  } else if(!cows.length){
+    html+='<div class="ledger"><div class="empty"><p>No cows match “'+esc(state.herdQuery.trim())+'”.</p></div></div>';
   } else {
     html+='<div class="ledger">'+cows.map(cowRowHTML).join("")+'</div>';
   }
@@ -1003,11 +1015,13 @@ function feedValue(cowId,field){
 }
 function feedRowHTML(c){
   const meta=[c.name?"Tag "+c.tag:"",c.breed||""].filter(Boolean).join(", ");
-  const num=(field,label,ph)=>'<div class="f"><label for="feed-'+field+'-'+esc(c.id)+'">'+label+'</label><input type="number" inputmode="decimal" min="0" step="any" placeholder="'+(ph||"0")+'" id="feed-'+field+'-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="'+field+'" value="'+esc(feedValue(c.id,field))+'" disabled></div>';
-  return '<div class="care">'+coat(c.id,44)
-    +'<div style="min-width:120px;flex:none"><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div><button class="btn ghost small" type="button" data-act="edit-feed-row" data-id="'+esc(c.id)+'" data-editing="0">Edit feed</button></div>'
+  const editing=!!state.feedEditing[c.id];
+  const dis=editing?"":" disabled";
+  const num=(field,label,ph)=>'<div class="f"><label for="feed-'+field+'-'+esc(c.id)+'">'+label+'</label><input type="number" inputmode="decimal" min="0" step="any" placeholder="'+(ph||"0")+'" id="feed-'+field+'-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="'+field+'" value="'+esc(feedValue(c.id,field))+'"'+dis+'></div>';
+  return '<div class="care" data-cow-row="'+esc(c.id)+'">'+coat(c.id,44)
+    +'<div style="min-width:120px;flex:none"><div class="nm">'+esc(cowLabel(c))+'</div><div class="meta">'+esc(meta)+'</div><button class="btn ghost small" type="button" data-act="edit-feed-row" data-id="'+esc(c.id)+'" data-editing="'+(editing?"1":"0")+'">'+(editing?"Done editing":"Edit feed")+'</button></div>'
     +'<div class="cf">'+num("silage","Silage (kg)")+num("other","Other fodder (kg)")
-    +'<div class="f"><label for="feed-otherType-'+esc(c.id)+'">Other fodder type</label><input type="text" maxlength="40" placeholder="Napier grass" id="feed-otherType-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="otherType" value="'+esc(feedValue(c.id,"otherType"))+'" disabled></div>'
+    +'<div class="f"><label for="feed-otherType-'+esc(c.id)+'">Other fodder type</label><input type="text" maxlength="40" placeholder="Napier grass" id="feed-otherType-'+esc(c.id)+'" data-cow="'+esc(c.id)+'" data-field="otherType" value="'+esc(feedValue(c.id,"otherType"))+'"'+dis+'></div>'
     +num("meal","Dairy meal (kg)")+num("supplement","Supplements (kg)")+num("silageCost","Silage cost/kg (KES)")+num("otherCost","Other fodder cost/kg (KES)")+num("mealCost","Dairy meal cost/kg (KES)")+num("supplementCost","Supplement cost/kg (KES)")+'</div></div>';
 }
 function feedPending(){
@@ -1043,7 +1057,11 @@ function validateFeed(){
 }
 function renderFeedBody(){
   const body=$("#feedbody"); if(!body) return;
-  const active=document.activeElement, keepId=active&&active.dataset?active.dataset.field:null, keepCow=active&&active.dataset?active.dataset.cow:null;
+  const active=document.activeElement;
+  const keepId=active&&active.dataset?active.dataset.field:null;
+  const keepCow=active&&active.dataset?active.dataset.cow:null;
+  const keepStart=(active&&typeof active.selectionStart==="number")?active.selectionStart:null;
+  const keepEnd=(active&&typeof active.selectionEnd==="number")?active.selectionEnd:null;
   const cows=sortedCows(state.cows);
   let html="";
   if(!cows.length){
@@ -1051,7 +1069,15 @@ function renderFeedBody(){
   } else {
     html='<div class="ledger">'+cows.map(feedRowHTML).join("")+'</div>';
     let ts=0,to=0,tm=0,tp=0,feedCost=0;
-    for(const c of cows){ const f=feedFor(c.id,state.careDate); ts+=f.silage; to+=f.other; tm+=f.meal; tp+=f.supplement; feedCost+=f.silage*f.silageCost+f.other*f.otherCost+f.meal*f.mealCost+f.supplement*f.supplementCost; }
+    for(const c of cows){
+      // Prefer in-progress draft values so totals stay live while editing
+      const f=feedFor(c.id,state.careDate);
+      const n=field=>{ const k=state.careDate+"|"+c.id+"|"+field; return k in state.feedDraft ? (parseFloat(state.feedDraft[k])||0) : (f[field]||0); };
+      const silage=n("silage"), other=n("other"), meal=n("meal"), supplement=n("supplement");
+      const silageCost=n("silageCost"), otherCost=n("otherCost"), mealCost=n("mealCost"), supplementCost=n("supplementCost");
+      ts+=silage; to+=other; tm+=meal; tp+=supplement;
+      feedCost+=silage*silageCost+other*otherCost+meal*mealCost+supplement*supplementCost;
+    }
     html+='<div class="total"><div><div class="eq">Total for '+esc(fmtDate(state.careDate,{weekday:"short",day:"numeric",month:"short"}))+'</div>'
       +'<div class="eq">'+fmtL(ts)+' kg silage, '+fmtL(to)+' kg other fodder, '+fmtL(tm)+' kg dairy meal, '+fmtL(tp)+' kg supplements</div>'+'<div class="eq">Estimated feed cost: <b>'+esc(fmtKES(feedCost))+'</b></div></div>'
       +'<button class="btn" id="savefeed" data-act="save-feed">Save feed</button></div>'
@@ -1059,7 +1085,13 @@ function renderFeedBody(){
   }
   body.innerHTML=html;
   updateFeedButton();
-  if(keepCow&&keepId){ const inp=document.getElementById("feed-"+keepId+"-"+keepCow); if(inp) inp.focus(); }
+  if(keepCow&&keepId){
+    const inp=document.getElementById("feed-"+keepId+"-"+keepCow);
+    if(inp){
+      inp.focus();
+      try{ if(keepStart!=null) inp.setSelectionRange(keepStart,keepEnd!=null?keepEnd:keepStart); }catch(e){}
+    }
+  }
 }
 function updateFeedButton(){
   const b=$("#savefeed"); if(!b) return;
@@ -1079,6 +1111,7 @@ async function saveFeed(){
       state.feed[c.id+"|"+date]={silage:c.vals.silage,other:c.vals.other,otherType:c.vals.otherType,meal:c.vals.meal,supplement:c.vals.supplement,silageCost:c.vals.silageCost,otherCost:c.vals.otherCost,mealCost:c.vals.mealCost,supplementCost:c.vals.supplementCost};
       ["silage","other","meal","supplement","otherType","silageCost","otherCost","mealCost","supplementCost"].forEach(f=>{ delete state.feedDraft[date+"|"+c.id+"|"+f]; });
     });
+    state.feedEditing={};
     toast("Feed saved");
   }catch(e){ toast("Couldn't save the feed. "+friendly(e),true); }
   state.saving=false;
@@ -2239,18 +2272,19 @@ document.addEventListener("click",e=>{
     case "view-receipt": viewReceipt(a.dataset.path); break;
     case "save-feed": saveFeed(); break;
     case "edit-feed-row": {
-      const row=a.closest(".care"), inputs=row&&row.querySelectorAll('input[data-cow]');
-      if(!row||!inputs||!inputs.length) break;
-      // Only toggles edit mode. Saving is done with the main "Save feed" button.
-      if(a.dataset.editing==="1"){
-        inputs.forEach(inp=>inp.disabled=true);
-        a.dataset.editing="0";
-        a.textContent="Edit feed";
+      const id=a.dataset.id;
+      if(!id) break;
+      // Only toggles edit mode (stored in state so background refreshes keep it open).
+      // Saving is done with the main "Save feed" button.
+      if(state.feedEditing[id]){
+        delete state.feedEditing[id];
       } else {
-        inputs.forEach(inp=>inp.disabled=false);
-        a.dataset.editing="1";
-        a.textContent="Done editing";
-        const first=row.querySelector('input[data-cow]'); if(first){first.focus();first.select();}
+        state.feedEditing[id]=true;
+      }
+      renderFeedBody();
+      if(state.feedEditing[id]){
+        const first=document.querySelector('input[data-cow="'+CSS.escape(id)+'"]');
+        if(first){ first.focus(); first.select(); }
       }
       break;
     }
@@ -2305,6 +2339,12 @@ document.addEventListener("input",e=>{
     const s=$("#shop-search"); if(s){ s.focus(); try{ s.setSelectionRange(s.value.length,s.value.length); }catch(e){} }
     return;
   }
+  if(t.id==="herd-search"){
+    state.herdQuery=t.value;
+    renderHerd();
+    const s=$("#herd-search"); if(s){ s.focus(); try{ s.setSelectionRange(s.value.length,s.value.length); }catch(e){} }
+    return;
+  }
 });
 document.addEventListener("change",e=>{
   const t=e.target;
@@ -2331,6 +2371,7 @@ document.addEventListener("change",e=>{
   if(t.id==="feeddate"){
     if(!t.value){ t.value=state.careDate; return; }
     state.careDate=t.value>todayStr()?todayStr():t.value; t.value=state.careDate;
+    state.feedEditing={};
     ensureMonth(monthOf(state.careDate)); renderFeedBody(); return;
   }
   if(t.id==="casualdate"){
