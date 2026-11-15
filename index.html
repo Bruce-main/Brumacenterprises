@@ -1603,8 +1603,15 @@ function updateSaleInfo(){
   const info=$("#saleinfo"); if(!info) return;
   const p=selectedProduct(); if(!p){ info.textContent=""; return; }
   const n=parseFloat(state.sale.qty), word=unitWord(p.unit);
+  const isToday=state.salesDate===todayStr();
   $("#s-unit").textContent="("+word+")";
-  info.innerHTML=esc(fmtKES(p.price)+" a "+word+". ")+(p.qty>0?esc(fmtL(p.qty)+" "+p.unit+" left in stock."):"Out of stock.")
+  let stockBit="";
+  if(p.kind==="milk"&&!isToday){
+    stockBit="Past-day milk sale — does not change today's live stock.";
+  } else {
+    stockBit=p.qty>0?fmtL(p.qty)+" "+p.unit+" left in stock.":"Out of stock.";
+  }
+  info.innerHTML=esc(fmtKES(p.price)+" a "+word+". "+stockBit)
     +(isFinite(n)&&n>0?' Amount: <b>'+esc(fmtKES(n*p.price))+'</b>':"");
 }
 function renderDailyBody(){
