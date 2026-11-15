@@ -94,6 +94,17 @@ input[type=date],input[type=text],input[type=email],input[type=number],input[typ
 }
 .searchbar .s-clear:hover{background:var(--line);color:var(--ink)}
 .searchbar.has-query .s-clear{display:inline-flex}
+.combo{position:relative}
+.combo input[type=search]{padding-right:38px}
+.combo-caret{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:24px;height:24px;border:0;background:transparent;color:var(--ink-soft);cursor:pointer;display:grid;place-items:center;padding:0;border-radius:6px}
+.combo-caret:hover{color:var(--ink);background:var(--surface-2)}
+.combo-menu{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;max-height:240px;overflow-y:auto;background:var(--surface);border:1px solid var(--edge);border-radius:var(--r-md);box-shadow:var(--shadow-lg);padding:4px}
+.combo-opt{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;border:0;background:transparent;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:15px}
+.combo-opt:hover,.combo-opt.hi{background:var(--surface-2)}
+.combo-opt[aria-selected="true"]{background:var(--green-tint);color:var(--green-deep);font-weight:600}
+.combo-opt .c-meta{font-size:13px;color:var(--ink-soft);white-space:nowrap}
+.combo-opt.out .c-meta{color:var(--red)}
+.combo-empty{padding:11px 12px;color:var(--ink-soft);font-size:14px}
 textarea{min-height:78px;resize:vertical}
 input:hover:not(:focus),select:hover:not(:focus),textarea:hover:not(:focus){border-color:var(--ink-soft)}
 input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--ring)}
@@ -318,6 +329,7 @@ dialog[open]{animation:dlgIn .22s cubic-bezier(.2,.8,.3,1)}
    ===================================================================== */
 const SUPABASE_URL = "https://cimzgmhemqkdqqlbxakx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";
+
 /* ---------- Settings ---------- */
 // The milk price is stored in the database and admins change it in the app
 const GESTATION_DAYS = 283;  // used for the expected calving date
@@ -348,7 +360,7 @@ const state = {
   ready:false,
   cows:[], cereals:[], roles:[], milk:{}, milkPrices:{}, sales:[], loadedMonths:new Set(),
   settings:{milkPrice:70,milkStock:0},
-  salesDate:todayStr(), sale:{product:"milk",qty:"",time:""}, editingAllocationId:null, costPeriod:"daily", costDate:todayStr(), costReport:null,
+  salesDate:todayStr(), sale:{product:"milk",qty:"",time:"",query:"",open:false,hi:0}, editingAllocationId:null, costPeriod:"daily", costDate:todayStr(), costReport:null,
   feed:{}, feedDraft:{}, careDate:todayStr(),
   staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualWorkers:[], casualDate:todayStr(), casualDraft:{},
   members:{list:[],allowAdminSignup:true,loaded:false,loading:false,error:""},
@@ -846,7 +858,7 @@ function resetToLogin(){
   VIEWS.forEach(t=>{ const v=$("#view-"+t); if(v) v.innerHTML=""; });
   state.user=null; state.profile=null; state.admin=false; state.ready=false; state.error="";
   state.cows=[]; state.cereals=[]; state.roles=[]; state.milk={}; state.milkPrices={}; state.sales=[]; state.loadedMonths=new Set();
-  state.settings={milkPrice:70,milkStock:0}; state.salesDate=todayStr(); state.sale={product:"milk",qty:"",time:""};
+  state.settings={milkPrice:70,milkStock:0}; state.salesDate=todayStr(); state.sale={product:"milk",qty:"",time:"",query:"",open:false,hi:0};
   state.feed={}; state.feedDraft={}; state.careDate=todayStr();
   state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.costs=[]; state.casual={}; state.casualWorkers=[]; state.casualDate=todayStr(); state.casualDraft={};
   state.members={list:[],allowAdminSignup:true,loaded:false,loading:false,error:""};
@@ -1497,7 +1509,7 @@ function renderDaily(){
       +(inShop?"Record what was sold at the shop, and when.":"Record milk sold, and when.")+' Each sale lowers the stock. Past days need a receipt photo.</p></div>'
       +'<div class="field"><label for="dailydate">Date</label><input type="date" id="dailydate" max="'+todayStr()+'"></div></div>'
       +'<form id="saleform" class="salecard" novalidate><div class="grid3">'
-      +(inShop?'<div class="field"><label for="s-product-filter">Product</label><input type="search" id="s-product-filter" placeholder="Type to filter products…" autocomplete="off" style="margin-bottom:6px"><select id="s-product"></select></div>':'')
+      +(inShop?'<div class="field"><label for="s-product-search">Product</label><div class="combo" id="s-product-combo"><input type="search" id="s-product-search" placeholder="Search or choose a product…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="s-product-menu"><button type="button" class="combo-caret" data-act="toggle-product-menu" aria-label="Show products" tabindex="-1">▾</button><div class="combo-menu" id="s-product-menu" role="listbox" hidden></div></div></div>':'')
       +'<div class="field"><label for="s-qty">Quantity <span class="hint" id="s-unit"></span></label><input type="number" id="s-qty" inputmode="decimal" min="0" step="any" placeholder="0"></div>'
       +'<div class="field"><label for="s-time">Time of sale</label><input type="time" id="s-time"></div></div>'
       +'<div class="field" id="receipt-field" hidden style="margin-top:12px"><label for="s-receipt">Receipt photo <span class="hint">(required for past days)</span></label><input type="file" id="s-receipt" accept="image/*" capture="environment"></div>'
@@ -1588,6 +1600,34 @@ async function deleteMilkAllocation(id){
   catch(e){toast("Couldn't remove allocation. "+friendly(e),true);}
 }
 
+function filteredSaleProducts(){
+  const fullList=productList();
+  const terms=(state.sale.query||"").trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if(!terms.length) return fullList;
+  return fullList.filter(p=>terms.every(t=>(String(p.name)+" "+unitWord(p.unit)).toLowerCase().includes(t)));
+}
+function renderProductMenu(){
+  const menu=$("#s-product-menu"), inp=$("#s-product-search");
+  if(!menu||!inp) return;
+  const open=!!state.sale.open;
+  inp.setAttribute("aria-expanded",String(open));
+  menu.hidden=!open;
+  if(!open) return;
+  const list=filteredSaleProducts();
+  if(!list.length){
+    menu.innerHTML='<div class="combo-empty">No matching products</div>';
+    return;
+  }
+  if(state.sale.hi>=list.length) state.sale.hi=0;
+  if(state.sale.hi<0) state.sale.hi=0;
+  menu.innerHTML=list.map((p,i)=>{
+    const sel=p.value===state.sale.product;
+    const out=p.qty<=0;
+    const meta=out?"Out of stock":(fmtL(p.qty)+" "+p.unit+" · "+fmtKES(p.price));
+    return '<button type="button" role="option" class="combo-opt'+(i===state.sale.hi?" hi":"")+(out?" out":"")+'" aria-selected="'+sel+'" data-act="pick-sale-product" data-value="'+esc(p.value)+'">'
+      +'<span>'+esc(p.name)+'</span><span class="c-meta">'+esc(meta)+'</span></button>';
+  }).join("");
+}
 function refreshSaleForm(){
   const isToday=state.salesDate===todayStr();
   $("#saleform").hidden=false;
@@ -1596,19 +1636,21 @@ function refreshSaleForm(){
   $("#salenote").innerHTML=isToday
     ? ""
     : '<div class="note">Recording a sale for a previous day. Attach a clear photo of the receipt — it is required.</div>';
-  const sel=$("#s-product"), filterInp=$("#s-product-filter");
-  const q=filterInp?filterInp.value.trim().toLowerCase():"";
-  const terms=q.split(/\s+/).filter(Boolean);
   const fullList=productList();
-  const list=terms.length?fullList.filter(p=>terms.every(t=>(String(p.name)+" "+unitWord(p.unit)).toLowerCase().includes(t))):fullList;
-  const cur=state.sale.product;
-  if(sel){
-    sel.innerHTML=list.length
-      ? list.map(p=>'<option value="'+esc(p.value)+'">'+esc(p.name)+(p.qty<=0?" (out of stock)":"")+'</option>').join("")
-      : '<option value="">No matching products</option>';
-    sel.value=list.some(p=>p.value===cur)?cur:(list[0]?list[0].value:"");
+  const inp=$("#s-product-search");
+  if(inp){
+    const cur=fullList.find(p=>p.value===state.sale.product);
+    if(!cur && fullList.length && !(state.sale.query||"").trim()){
+      state.sale.product=fullList[0].value;
+    }
+    const chosen=fullList.find(p=>p.value===state.sale.product);
+    if(!state.sale.open && document.activeElement!==inp){
+      inp.value=chosen?chosen.name:(state.sale.query||"");
+    }
+    renderProductMenu();
+  } else {
+    state.sale.product=fullList[0]?fullList[0].value:"milk";
   }
-  state.sale.product=sel?sel.value:(list[0]?list[0].value:"milk");
   updateSaleInfo();
 }
 function updateSaleInfo(){
@@ -1694,7 +1736,7 @@ async function recordSaleFromForm(){
       p_sold_at:when.toISOString(),
       p_receipt_path:receiptPath
     }));
-    state.sale.qty=""; state.sale.time=nowClock();
+    state.sale.qty=""; state.sale.time=nowClock(); state.sale.query=""; state.sale.open=false; state.sale.hi=0;
     if($("#s-qty")) $("#s-qty").value="";
     if($("#s-time")) $("#s-time").value=state.sale.time;
     if(fileInput) fileInput.value="";
@@ -2315,6 +2357,12 @@ document.addEventListener("click",e=>{
   if(tab){ state.tab=tab.dataset.tab; renderAll(); return; }
   const at=e.target.closest("[data-authtab]");
   if(at){ state.authTab=at.dataset.authtab; state.authNote=""; renderAuth(); return; }
+  if(state.sale.open && !e.target.closest("#s-product-combo")){
+    state.sale.open=false;
+    const chosen=selectedProduct(), inp=$("#s-product-search");
+    if(inp && chosen) inp.value=chosen.name;
+    renderProductMenu();
+  }
   const open=e.target.closest("[data-open]");
   if(open){ openDetail(open.dataset.open); return; }
   const a=e.target.closest("[data-act]"); if(!a) return;
@@ -2372,6 +2420,31 @@ document.addEventListener("click",e=>{
     case "role-down": moveRole(a.dataset.id,1); break;
     case "remove-sale": removeSale(a.dataset.id); break;
     case "view-receipt": viewReceipt(a.dataset.path); break;
+    case "toggle-product-menu": {
+      const inp=$("#s-product-search");
+      state.sale.open=!state.sale.open;
+      if(state.sale.open){
+        state.sale.query="";
+        if(inp){ inp.value=""; inp.focus(); }
+      } else {
+        const chosen=selectedProduct();
+        if(inp && chosen) inp.value=chosen.name;
+      }
+      renderProductMenu();
+      break;
+    }
+    case "pick-sale-product": {
+      state.sale.product=a.dataset.value;
+      state.sale.open=false;
+      state.sale.query="";
+      const chosen=selectedProduct(), inp=$("#s-product-search");
+      if(inp) inp.value=chosen?chosen.name:"";
+      const er=$("#saleerr"); if(er) er.hidden=true;
+      renderProductMenu();
+      updateSaleInfo();
+      const qInp=$("#s-qty"); if(qInp) qInp.focus();
+      break;
+    }
     case "save-feed": saveFeed(); break;
     case "edit-feed-row": {
       const id=a.dataset.id;
@@ -2427,13 +2500,23 @@ document.addEventListener("input",e=>{
   }
   if(t.id==="a-qty"){ updateAddTotal(); return; }
   if(t.closest("#saleform")){
-    if(t.id==="s-product-filter"){
+    if(t.id==="s-product-search"){
+      state.sale.query=t.value;
+      state.sale.open=true;
+      state.sale.hi=0;
+      const list=filteredSaleProducts();
+      if(list.length && !list.some(p=>p.value===state.sale.product)){
+        state.sale.product=list[0].value;
+      } else if(!list.length){
+        state.sale.product="";
+      }
       const er=$("#saleerr"); if(er) er.hidden=true;
-      refreshSaleForm(); return;
+      renderProductMenu();
+      updateSaleInfo();
+      return;
     }
     if(t.id==="s-qty") state.sale.qty=t.value;
     else if(t.id==="s-time") state.sale.time=t.value;
-    else if(t.id==="s-product") state.sale.product=t.value;
     const er=$("#saleerr"); if(er) er.hidden=true;
     updateSaleInfo(); return;
   }
@@ -2476,7 +2559,7 @@ document.addEventListener("change",e=>{
   }
   if(t.id==="admsignup"){ setAdminSignup(t.checked); return; }
   if(t.id==="assignrole"){ assignRole(t.dataset.user,t.value||null); return; }
-  if(t.id==="s-product"){ state.sale.product=t.value; updateSaleInfo(); return; }
+
   if(t.id==="dailydate"){
     if(!t.value){ t.value=state.salesDate; return; }
     state.salesDate=t.value>todayStr()?todayStr():t.value; t.value=state.salesDate;
@@ -2507,7 +2590,54 @@ document.addEventListener("change",e=>{
   ensureMonth(monthOf(state.date));
   renderLogBody();
 });
+document.addEventListener("focusin",e=>{
+  if(e.target&&e.target.id==="s-product-search"){
+    state.sale.open=true;
+    state.sale.query="";
+    e.target.select();
+    renderProductMenu();
+  }
+});
 document.addEventListener("keydown",e=>{
+  if(e.target&&e.target.id==="s-product-search"){
+    const list=filteredSaleProducts();
+    if(e.key==="ArrowDown"){
+      e.preventDefault();
+      state.sale.open=true;
+      if(list.length) state.sale.hi=(state.sale.hi+1)%list.length;
+      renderProductMenu();
+      return;
+    }
+    if(e.key==="ArrowUp"){
+      e.preventDefault();
+      state.sale.open=true;
+      if(list.length) state.sale.hi=(state.sale.hi-1+list.length)%list.length;
+      renderProductMenu();
+      return;
+    }
+    if(e.key==="Enter"&&state.sale.open){
+      e.preventDefault();
+      const pick=list[state.sale.hi]||list[0];
+      if(pick){
+        state.sale.product=pick.value;
+        state.sale.open=false;
+        state.sale.query="";
+        e.target.value=pick.name;
+        renderProductMenu();
+        updateSaleInfo();
+        const qInp=$("#s-qty"); if(qInp) qInp.focus();
+      }
+      return;
+    }
+    if(e.key==="Escape"&&state.sale.open){
+      e.preventDefault();
+      state.sale.open=false;
+      const chosen=selectedProduct();
+      if(chosen) e.target.value=chosen.name;
+      renderProductMenu();
+      return;
+    }
+  }
   if(e.key==="Enter"&&e.target.matches&&e.target.matches("#logbody input[data-cow]")){
     e.preventDefault();
     const all=Array.from(document.querySelectorAll("#logbody input[data-cow]")).filter(x=>!x.disabled), i=all.indexOf(e.target);
