@@ -297,12 +297,16 @@ dialog[open]{animation:dlgIn .22s cubic-bezier(.2,.8,.3,1)}
 
 /* Searchable product combobox (shop sales) */
 .combo{position:relative}
-.combo input[type=text],.combo input[type=search]{width:100%;padding:10px 13px;border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--surface);min-height:44px}
+.combo input[type=text],.combo input[type=search]{width:100%;padding:10px 40px 10px 13px;border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--surface);min-height:44px}
 .combo input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--ring)}
+.combo-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;border-radius:50%;background:var(--surface-2);color:var(--ink-soft);font-size:16px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;padding:0;z-index:2}
+.combo-clear:hover{background:var(--line);color:var(--ink)}
+.combo.has-value .combo-clear{display:inline-flex}
 .combo-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;max-height:260px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:6px}
 .combo-list[hidden]{display:none !important}
 .combo-opt{display:block;width:100%;text-align:left;border:0;background:transparent;padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--ink)}
-.combo-opt:hover,.combo-opt[aria-selected="true"]{background:var(--green-tint);color:var(--green-deep)}
+.combo-opt:hover{background:var(--surface-2)}
+.combo-opt[aria-selected="true"]{background:var(--green-tint);color:var(--green-deep)}
 .combo-opt .co-name{font-weight:600}
 .combo-opt .co-meta{font-size:13px;color:var(--ink-soft);margin-top:2px}
 .combo-empty{padding:12px;color:var(--ink-soft);font-size:14px}
@@ -359,6 +363,7 @@ dialog[open]{animation:dlgIn .22s cubic-bezier(.2,.8,.3,1)}
    ===================================================================== */
 const SUPABASE_URL = "https://cimzgmhemqkdqqlbxakx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";
+
 /* ---------- Settings ---------- */
 // The milk price is stored in the database and admins change it in the app
 const GESTATION_DAYS = 283;  // used for the expected calving date
@@ -388,7 +393,7 @@ const state = {
   ready:false,
   cows:[], cereals:[], packs:[], roles:[], milk:{}, milkPrices:{}, sales:[], loadedMonths:new Set(),
   settings:{milkPrice:70,milkStock:0},
-  salesDate:todayStr(), sale:{product:"milk",packId:"",qty:"",time:"",query:""}, editingAllocationId:null, costPeriod:"daily", costDate:todayStr(), costReport:null,
+  salesDate:todayStr(), sale:{product:"milk",packId:"",qty:"",time:"",query:"",comboOpen:false,comboHi:null}, editingAllocationId:null, costPeriod:"daily", costDate:todayStr(), costReport:null,
   feed:{}, feedDraft:{}, careDate:todayStr(),
   staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualWorkers:[], casualDate:todayStr(), casualDraft:{},
   members:{list:[],loaded:false,loading:false,error:""},
@@ -884,7 +889,7 @@ function resetToLogin(){
   VIEWS.forEach(t=>{ const v=$("#view-"+t); if(v) v.innerHTML=""; });
   state.user=null; state.profile=null; state.admin=false; state.ready=false; state.error="";
   state.cows=[]; state.cereals=[]; state.packs=[]; state.roles=[]; state.milk={}; state.milkPrices={}; state.sales=[]; state.loadedMonths=new Set();
-  state.settings={milkPrice:70,milkStock:0}; state.salesDate=todayStr(); state.sale={product:"milk",packId:"",qty:"",time:"",query:""};
+  state.settings={milkPrice:70,milkStock:0}; state.salesDate=todayStr(); state.sale={product:"milk",packId:"",qty:"",time:"",query:"",comboOpen:false,comboHi:null};
   state.feed={}; state.feedDraft={}; state.careDate=todayStr();
   state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.costs=[]; state.casual={}; state.casualWorkers=[]; state.casualDate=todayStr(); state.casualDraft={};
   state.members={list:[],loaded:false,loading:false,error:""};
@@ -1604,7 +1609,7 @@ function renderDaily(){
       +(inShop?"Record what was sold at the shop, and when.":"Record milk sold, and when.")+' Each sale lowers the stock. Past days need a receipt photo.</p></div>'
       +'<div class="field"><label for="dailydate">Date</label><input type="date" id="dailydate" max="'+todayStr()+'"></div></div>'
       +'<form id="saleform" class="salecard" novalidate><div class="grid3">'
-      +(inShop?'<div class="field full"><label for="s-product-q">Product</label><div class="combo" id="product-combo"><input type="search" id="s-product-q" placeholder="Search product or pack size…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="s-product-list" aria-autocomplete="list"><div class="combo-list" id="s-product-list" role="listbox" hidden></div><input type="hidden" id="s-product-val"></div></div>':'')
+      +(inShop?'<div class="field full"><label for="s-product-q">Product</label><div class="combo" id="product-combo"><input type="text" id="s-product-q" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="s-product-list" aria-autocomplete="list" spellcheck="false"><button type="button" class="combo-clear" id="s-product-clear" data-act="clear-product" aria-label="Clear product" hidden>×</button><div class="combo-list" id="s-product-list" role="listbox" hidden></div><input type="hidden" id="s-product-val"></div></div>':'')
       +'<div class="field"><label for="s-qty">Quantity <span class="hint" id="s-unit"></span></label><input type="number" id="s-qty" inputmode="decimal" min="0" step="any" placeholder="0"></div>'
       +'<div class="field"><label for="s-time">Time of sale</label><input type="time" id="s-time"></div></div>'
       +'<div class="field" id="receipt-field" hidden style="margin-top:12px"><label for="s-receipt">Receipt photo <span class="hint">(required for past days)</span></label><input type="file" id="s-receipt" accept="image/*" capture="environment"></div>'
@@ -1694,6 +1699,21 @@ async function deleteMilkAllocation(id){
   catch(e){toast("Couldn't remove allocation. "+friendly(e),true);}
 }
 
+function productComboFocused(){
+  const qEl=$("#s-product-q");
+  return !!(qEl && document.activeElement===qEl);
+}
+function syncProductComboDisplay(){
+  const qEl=$("#s-product-q"), vEl=$("#s-product-val"), wrap=$("#product-combo");
+  if(!qEl) return;
+  // Never overwrite the field while the user is typing / focused
+  if(productComboFocused() || state.sale.comboOpen) return;
+  const cur=selectedProduct();
+  const label=cur?packDisplayName(cur):"";
+  qEl.value=label;
+  if(vEl) vEl.value=cur?cur.value:"";
+  if(wrap) wrap.classList.toggle("has-value", !!label);
+}
 function refreshSaleForm(){
   const isToday=state.salesDate===todayStr();
   $("#saleform").hidden=false;
@@ -1703,44 +1723,61 @@ function refreshSaleForm(){
     ? ""
     : '<div class="note">Recording a sale for a previous day. Attach a clear photo of the receipt — it is required.</div>';
   const list=productList();
-  // Keep selection valid
   let cur=selectedProduct();
   if(!cur && list.length){ cur=list[0]; state.sale.product=cur.value; state.sale.packId=cur.packId||""; }
   if(state.section==="shop"){
-    const qEl=$("#s-product-q"), vEl=$("#s-product-val");
-    if(qEl && cur){
-      if(!state.sale.query) qEl.value=packDisplayName(cur);
-      vEl && (vEl.value=cur.value);
-    }
-    renderProductCombo(false);
+    syncProductComboDisplay();
+    // Keep list content fresh, but do not force-open or steal focus
+    renderProductCombo(!!state.sale.comboOpen);
   }
-  if($("#s-qty")) $("#s-qty").value=state.sale.qty;
-  if($("#s-time")) $("#s-time").value=state.sale.time||nowClock();
+  if($("#s-qty") && !($("#s-qty")===document.activeElement)) $("#s-qty").value=state.sale.qty;
+  if($("#s-time") && !($("#s-time")===document.activeElement)) $("#s-time").value=state.sale.time||nowClock();
   updateSaleInfo();
 }
 function filteredProductOptions(){
   const list=productList();
   const q=(state.sale.query||"").trim().toLowerCase();
   if(!q) return list;
-  return list.filter(p=>{
-    const hay=(p.name+" "+(p.label||"")+" "+packDisplayName(p)).toLowerCase();
-    return hay.includes(q);
-  });
+  // Split into words so "nes 1" matches "1.6g Nescafe · 1 piece"
+  const words=q.split(/\s+/).filter(Boolean);
+  const scored=[];
+  for(const p of list){
+    const name=(p.name||"").toLowerCase();
+    const label=(p.label||"").toLowerCase();
+    const disp=packDisplayName(p).toLowerCase();
+    const hay=name+" "+label+" "+disp;
+    if(!words.every(w=>hay.includes(w))) continue;
+    // Prefer matches that start with the query / first word
+    let score=0;
+    if(name.startsWith(words[0])||disp.startsWith(words[0])) score+=3;
+    else if(name.includes(words[0])) score+=2;
+    if(label.startsWith(words[0])) score+=1;
+    scored.push({p,score});
+  }
+  scored.sort((a,b)=>b.score-a.score||String(a.p.name).localeCompare(String(b.p.name)));
+  return scored.map(s=>s.p);
 }
 function renderProductCombo(open){
   const box=$("#s-product-list"); if(!box) return;
+  state.sale.comboOpen=!!open;
   const opts=filteredProductOptions();
   const cur=selectedProduct();
+  const hi=state.sale.comboHi;
   if(!opts.length){
-    box.innerHTML='<div class="combo-empty">No products match.</div>';
+    box.innerHTML='<div class="combo-empty">No products match “'+esc((state.sale.query||"").trim())+'”.</div>';
   } else {
-    box.innerHTML=opts.map(p=>{
-      const sel=cur&&p.value===cur.value;
+    box.innerHTML=opts.map((p,i)=>{
+      const sel=(typeof hi==="number"?i===hi:(cur&&p.value===cur.value));
       const stock=p.qty<=0?"Out of stock":fmtL(p.qty)+" left";
-      return '<button type="button" class="combo-opt" role="option" data-act="pick-product" data-value="'+esc(p.value)+'" data-pack="'+esc(p.packId||"")+'" aria-selected="'+sel+'">'
+      return '<button type="button" class="combo-opt" role="option" data-act="pick-product" data-value="'+esc(p.value)+'" data-pack="'+esc(p.packId||"")+'" data-idx="'+i+'" aria-selected="'+sel+'">'
         +'<div class="co-name">'+esc(packDisplayName(p))+'</div>'
         +'<div class="co-meta">'+esc(fmtKES(p.price))+' · '+esc(stock)+'</div></button>';
     }).join("");
+    // Keep highlighted option in view
+    if(typeof hi==="number"){
+      const el=box.querySelector('.combo-opt[data-idx="'+hi+'"]');
+      if(el&&el.scrollIntoView) el.scrollIntoView({block:"nearest"});
+    }
   }
   box.hidden=!open;
   const qEl=$("#s-product-q");
@@ -1749,13 +1786,42 @@ function renderProductCombo(open){
 function pickProduct(value, packId){
   state.sale.product=value;
   state.sale.packId=packId||"";
-  const p=selectedProduct();
   state.sale.query="";
-  const qEl=$("#s-product-q"), vEl=$("#s-product-val");
-  if(qEl) qEl.value=p?packDisplayName(p):"";
+  state.sale.comboOpen=false;
+  state.sale.comboHi=null;
+  const p=selectedProduct();
+  const qEl=$("#s-product-q"), vEl=$("#s-product-val"), wrap=$("#product-combo");
+  if(qEl){ qEl.value=p?packDisplayName(p):""; qEl.blur(); }
   if(vEl) vEl.value=value;
+  if(wrap) wrap.classList.toggle("has-value", !!(p&&packDisplayName(p)));
   renderProductCombo(false);
   updateSaleInfo();
+}
+function clearProductCombo(){
+  state.sale.query="";
+  state.sale.comboOpen=true;
+  state.sale.comboHi=null;
+  const qEl=$("#s-product-q"), wrap=$("#product-combo");
+  if(qEl){ qEl.value=""; qEl.focus(); }
+  if(wrap) wrap.classList.remove("has-value");
+  renderProductCombo(true);
+}
+function moveComboHi(delta){
+  const opts=filteredProductOptions();
+  if(!opts.length){ state.sale.comboHi=null; renderProductCombo(true); return; }
+  let i=typeof state.sale.comboHi==="number"?state.sale.comboHi:-1;
+  i=i+delta;
+  if(i<0) i=opts.length-1;
+  if(i>=opts.length) i=0;
+  state.sale.comboHi=i;
+  renderProductCombo(true);
+}
+function pickComboHi(){
+  const opts=filteredProductOptions();
+  if(!opts.length) return;
+  const i=typeof state.sale.comboHi==="number"?state.sale.comboHi:0;
+  const p=opts[Math.max(0,Math.min(i,opts.length-1))];
+  if(p) pickProduct(p.value, p.packId||"");
 }
 function updateSaleInfo(){
   const info=$("#saleinfo"); if(!info) return;
@@ -1842,7 +1908,7 @@ async function recordSaleFromForm(){
       p_receipt_path:receiptPath,
       p_pack_id:p.packId||null
     }));
-    state.sale.qty=""; state.sale.time=nowClock(); state.sale.query="";
+    state.sale.qty=""; state.sale.time=nowClock(); state.sale.query=""; state.sale.comboOpen=false;
     if($("#s-qty")) $("#s-qty").value="";
     if($("#s-time")) $("#s-time").value=state.sale.time;
     if(fileInput) fileInput.value="";
@@ -2599,6 +2665,9 @@ document.addEventListener("click",e=>{
     case "pick-product":
       pickProduct(a.dataset.value, a.dataset.pack||"");
       break;
+    case "clear-product":
+      clearProductCombo();
+      break;
     case "stock-edit": if(a.dataset.kind==="milk") openMilkEdit(); else openCerealForm(a.dataset.id); break;
     case "member-add": state.dlg={mode:"member-form"}; renderDialog(); openDlg(); { const f=document.getElementById("nm-name"); if(f) f.focus(); } break;
     case "role-create": openRoleForm(null); break;
@@ -2693,7 +2762,9 @@ document.addEventListener("input",e=>{
   }
   if(t.id==="s-product-q"){
     state.sale.query=t.value;
-    // Clear fixed selection while typing so filter works freely
+    state.sale.comboHi=0; // highlight best match while filtering
+    const wrap=$("#product-combo");
+    if(wrap) wrap.classList.toggle("has-value", !!t.value.trim());
     renderProductCombo(true);
     return;
   }
@@ -2744,6 +2815,20 @@ document.addEventListener("keydown",e=>{
     e.preventDefault();
     const all=Array.from(document.querySelectorAll("#logbody input[data-cow]")).filter(x=>!x.disabled), i=all.indexOf(e.target);
     if(i>=0&&i<all.length-1) all[i+1].focus(); else e.target.blur();
+    return;
+  }
+  if(e.target&&e.target.id==="s-product-q"){
+    if(e.key==="ArrowDown"){ e.preventDefault(); moveComboHi(1); return; }
+    if(e.key==="ArrowUp"){ e.preventDefault(); moveComboHi(-1); return; }
+    if(e.key==="Enter"){ e.preventDefault(); pickComboHi(); return; }
+    if(e.key==="Escape"){
+      e.preventDefault();
+      state.sale.comboOpen=false; state.sale.query=""; state.sale.comboHi=null;
+      const box=$("#s-product-list"); if(box) box.hidden=true;
+      syncProductComboDisplay();
+      e.target.blur();
+      return;
+    }
   }
 });
 document.addEventListener("submit",e=>{
@@ -2771,11 +2856,28 @@ $("#dlg").addEventListener("close",()=>{ state.dlg=null; });
 
 
 document.addEventListener("focusin",e=>{
-  if(e.target&&e.target.id==="s-product-q"){ renderProductCombo(true); }
+  if(e.target&&e.target.id==="s-product-q"){
+    // Start a fresh search: clear the box, show full list, filter as they type
+    state.sale.query="";
+    state.sale.comboHi=null;
+    e.target.value="";
+    const wrap=$("#product-combo");
+    if(wrap) wrap.classList.remove("has-value");
+    renderProductCombo(true);
+  }
 });
 document.addEventListener("click",e=>{
   const combo=$("#product-combo");
-  if(combo&&!combo.contains(e.target)){ const box=$("#s-product-list"); if(box) box.hidden=true; }
+  if(!combo) return;
+  if(combo.contains(e.target)) return;
+  // Close list and restore the selected product label
+  state.sale.comboOpen=false;
+  state.sale.query="";
+  const box=$("#s-product-list");
+  if(box) box.hidden=true;
+  const qEl=$("#s-product-q");
+  if(qEl) qEl.setAttribute("aria-expanded","false");
+  syncProductComboDisplay();
 });
 
 /* ---------- Start ---------- */
