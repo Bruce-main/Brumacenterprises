@@ -354,8 +354,7 @@ let sb=null;
 const state = {
   user:null, profile:null, admin:false, error:"", channel:null, recovery:false,
   auth:"loading",      // loading | config | out | pin | recovery | in
-  authTab:"login",     // login | signup | forgot
-  authRole:"user",     // user | admin  (choice on the login and signup forms)
+  authTab:"login",     // login | forgot
   authNote:"",
   ready:false,
   cows:[], cereals:[], roles:[], milk:{}, milkPrices:{}, sales:[], loadedMonths:new Set(),
@@ -363,7 +362,7 @@ const state = {
   salesDate:todayStr(), sale:{product:"milk",qty:"",time:"",query:"",open:false,hi:0}, editingAllocationId:null, costPeriod:"daily", costDate:todayStr(), costReport:null,
   feed:{}, feedDraft:{}, careDate:todayStr(),
   staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualWorkers:[], casualDate:todayStr(), casualDraft:{},
-  members:{list:[],allowAdminSignup:true,loaded:false,loading:false,error:""},
+  members:{list:[],loaded:false,loading:false,error:""},
   section:"farm", tab:"log", date:todayStr(), month:todayStr().slice(0,7),
   shopQuery:"", herdQuery:"",
   feedEditing:{}, milkEditing:{},
@@ -443,7 +442,7 @@ function statusPill(c){ return '<span class="pill '+esc(c.status||"")+'">'+esc(l
 function friendly(e){
   const m=(e&&e.message)||"", c=e&&e.code;
   if(c==="23505") return "That tag or name is already in use.";
-  if(c==="42501"||/row-level security|permission denied/i.test(m)) return "You don't have permission for that. If you are an admin, log out and log in as Admin again.";
+  if(c==="42501"||/row-level security|permission denied/i.test(m)) return "You don't have permission for that. Ask an administrator to review your account access.";
   if(/Invalid login credentials/i.test(m)) return "Email or password is incorrect.";
   if(/Email not confirmed/i.test(m)) return "Confirm your email first using the link we sent, then log in.";
   if(/already (been )?registered/i.test(m)) return "An account with this email already exists. Log in instead.";
@@ -545,9 +544,9 @@ async function loadProfile(){
   state.user=s.data&&s.data.session?s.data.session.user:null;
   if(!state.user){ state.profile=null; state.admin=false; return; }
   let p=null;
-  try{ p=await run(sb.from("profiles").select("name,email,role,admin_until,phone,job_title,area,created_at,role_id,roles(name,permissions,color)").eq("id",state.user.id).maybeSingle()); }catch(e){}
+  try{ p=await run(sb.from("profiles").select("name,email,role,phone,job_title,area,created_at,role_id,roles(name,permissions,color)").eq("id",state.user.id).maybeSingle()); }catch(e){}
   state.profile=p;
-  state.admin=!!(p&&p.role==="admin"&&p.admin_until&&Date.parse(p.admin_until)>Date.now());
+  state.admin=!!(p&&p.role==="admin");
 }
 function staffFromRow(r){ return {id:r.id,name:r.name,wage:Number(r.wage_amount),period:r.wage_period,active:r.active}; }
 function costFromRow(r){ return {id:r.id,category:r.category,description:r.description||"",amount:Number(r.amount),date:r.cost_date}; }
@@ -613,7 +612,7 @@ async function reloadAll(){
     await loadCore();
     await Promise.all(Array.from(state.loadedMonths).map(loadMonth));
     if(state.admin&&state.tab==="members") await loadMembers();
-    if(wasAdmin&&!state.admin) toast("Your admin session ended. Log in as Admin again to make changes.",true);
+    if(wasAdmin&&!state.admin) toast("Your administrator access was changed. The page permissions have been updated.",true);
     state.error="";
   }catch(e){}
   reloading=false; scheduleRender();
@@ -688,16 +687,11 @@ function renderBanner(){
   $("#banner").innerHTML = msg ? '<div class="'+cls+'" role="status">'+esc(msg)+(retry?' <button class="link" data-act="retry">Try again</button>':"")+'</div>' : "";
 }
 
-/* ----- Log in, sign up, admin PIN ----- */
-function roleChoice(name,legend){
-  return '<fieldset><legend>'+legend+'</legend><div class="roles">'
-    +'<label class="opt"><input type="radio" name="role" value="user"'+(state.authRole==="user"?" checked":"")+'> Normal user</label>'
-    +'<label class="opt"><input type="radio" name="role" value="admin"'+(state.authRole==="admin"?" checked":"")+'> Admin</label></div></fieldset>';
-}
+/* ----- Log in (role is read from the protected member profile) ----- */
 function renderAuth(){
   const el=$("#view-auth");
   if(state.auth==="loading"){ el.innerHTML=""; el.dataset.key=""; return; }
-  const key=state.auth+"|"+state.authTab+"|"+state.authNote+"|"+state.authRole;
+  const key=state.auth+"|"+state.authTab+"|"+state.authNote;
   if(el.dataset.key===key) return;
   el.dataset.key=key;
   const note=state.authNote?'<div class="note" role="status">'+esc(state.authNote)+'</div>':"";
@@ -705,11 +699,6 @@ function renderAuth(){
   if(state.auth==="config"){
     inner='<h2>Connect the database</h2><p class="sub">This site needs your Supabase project details before it can start.</p>'
       +'<ol class="steps"><li>Open <b>index.html</b> in a text editor.</li><li>Paste your Project URL and anon key near the top of the script.</li><li>Save, then reload this page.</li></ol><p class="sub">The README.md file explains each step.</p>';
-  } else if(state.auth==="pin"){
-    inner='<h2>Admin confirmation</h2><p class="sub">Enter the admin PIN to continue as an administrator.</p>'
-      +'<form id="pinform" class="stack" novalidate style="margin-top:16px"><div class="field"><label for="pin">Admin PIN</label><input type="password" id="pin" inputmode="numeric" autocomplete="off" maxlength="12"></div>'
-      +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Confirm PIN</button></form>'
-      +'<div class="authfoot"><button class="link" data-act="pin-normal">Continue as a normal user</button> &nbsp; <button class="link" data-act="cancel-pin">Cancel and log out</button></div>';
   } else if(state.auth==="recovery"){
     inner='<h2>Choose a new password</h2><p class="sub">Enter a new password for your account.</p>'
       +'<form id="recoveryform" class="stack" novalidate style="margin-top:16px"><div class="field"><label for="rc-pass">New password <span class="hint">(at least 8 characters)</span></label><input type="password" id="rc-pass" autocomplete="new-password"></div>'
@@ -721,28 +710,14 @@ function renderAuth(){
       +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Send reset link</button></form>'
       +'<div class="authfoot"><button class="link" data-authtab="login">Back to log in</button></div>';
   } else {
-    const tab=state.authTab;
-    const seg='<div class="seg" role="tablist" aria-label="Log in or sign up"><button role="tab" data-authtab="login" aria-selected="'+(tab==="login")+'">Log in</button><button role="tab" data-authtab="signup" aria-selected="'+(tab==="signup")+'">Sign up</button></div>';
-    let form;
-    if(tab==="login"){
-      form='<form id="loginform" class="stack" novalidate><div class="field"><label for="li-email">Email</label><input type="email" id="li-email" autocomplete="email"></div>'
-        +'<div class="field"><label for="li-pass">Password</label><input type="password" id="li-pass" autocomplete="current-password"></div>'
-        +roleChoice("role","Log in as")+'<p class="sub" style="margin:-6px 0 0">Admins are asked for a PIN after their password.</p>'
-        +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Log in</button></form>'
-        +'<div class="authfoot"><button class="link" data-authtab="forgot">Forgot your password?</button></div>';
-    } else {
-      form='<form id="signupform" class="stack" novalidate><div class="field"><label for="su-name">Your name</label><input type="text" id="su-name" autocomplete="name" maxlength="60"></div>'
-        +'<div class="field"><label for="su-email">Email</label><input type="email" id="su-email" autocomplete="email"></div>'
-        +'<div class="field"><label for="su-pass">Password <span class="hint">(at least 8 characters)</span></label><input type="password" id="su-pass" autocomplete="new-password"></div>'
-        +'<div class="field"><label for="su-pass2">Confirm password</label><input type="password" id="su-pass2" autocomplete="new-password"></div>'
-        +roleChoice("role","Sign up as")
-        +'<div class="field" id="pinfield"'+(state.authRole==="admin"?"":" hidden")+'><label for="su-pin">Admin PIN</label><input type="password" id="su-pin" inputmode="numeric" autocomplete="off" maxlength="12"></div>'
-        +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Create account</button></form>';
-    }
-    inner='<h2>'+(tab==="login"?"Log in":"Create your account")+'</h2><p class="sub">See the herd, record milk and sell cereals.</p>'+seg+note+form;
+    inner='<h2>Log in</h2><p class="sub">Sign in with the account created for you by a Brumac administrator.</p>'+note
+      +'<form id="loginform" class="stack" novalidate style="margin-top:16px"><div class="field"><label for="li-email">Email</label><input type="email" id="li-email" autocomplete="username"></div>'
+      +'<div class="field"><label for="li-pass">Password</label><input type="password" id="li-pass" autocomplete="current-password"></div>'
+      +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Log in</button></form>'
+      +'<div class="authfoot"><button class="link" data-authtab="forgot">Forgot your password?</button></div>';
   }
   el.innerHTML='<div class="auth">'+inner+'</div>';
-  const first=el.querySelector("input[type=email],input[type=password],input[type=text]"); if(first&&state.auth!=="config") try{ first.focus(); }catch(e){}
+  const first=el.querySelector('input[type=email],input[type=password],input[type=text]'); if(first&&state.auth!=="config") try{ first.focus(); }catch(e){}
 }
 
 function validEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
@@ -753,67 +728,14 @@ async function doLogin(){
   $("#autherr").hidden=true; btn.disabled=true; btn.textContent="Logging in…";
   try{
     await run(sb.auth.signInWithPassword({email:email,password:pass}));
-  }catch(e){ showErr("autherr",friendly(e)); btn.disabled=false; btn.textContent="Log in"; return; }
-  if(state.authRole==="admin"){ state.authNote=""; state.auth="pin"; renderAll(); return; }
-  try{ await sb.rpc("end_admin_session"); }catch(e){}
-  await enterApp();
-}
-async function submitPin(pin){
-  const r=await sb.rpc("verify_admin_pin",{p_pin:pin});
-  if(r.error) throw r.error;
-  return r.data||{ok:false,reason:"wrong"};
-}
-function pinMessage(r){
-  if(r.reason==="locked"){
-    const until=r.locked_until?new Date(r.locked_until).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"";
-    return "Too many wrong PINs. Try again"+(until?" after "+until:" in 15 minutes")+".";
-  }
-  if(r.reason==="not_admin") return "Your account isn't an admin. Ask an admin to change your role, or continue as a normal user.";
-  return "That PIN is incorrect.";
-}
-async function continueAsNormal(){
-  try{ await sb.rpc("end_admin_session"); }catch(e){}
-  await enterApp();
-}
-async function doPin(){
-  const pin=$("#pin").value.trim(), btn=$("#authbtn");
-  if(!pin) return showErr("autherr","Enter the admin PIN.");
-  $("#autherr").hidden=true; btn.disabled=true; btn.textContent="Checking…";
-  try{
-    const r=await submitPin(pin);
-    if(r.ok){ await enterApp(); return; }
-    showErr("autherr",pinMessage(r));
-  }catch(e){ showErr("autherr",friendly(e)); }
-  btn.disabled=false; btn.textContent="Confirm PIN"; $("#pin").value=""; $("#pin").focus();
-}
-async function doSignup(){
-  const name=$("#su-name").value.trim(), email=$("#su-email").value.trim(), p=$("#su-pass").value, p2=$("#su-pass2").value;
-  const wantsAdmin=state.authRole==="admin", pin=$("#su-pin").value.trim(), btn=$("#authbtn");
-  if(name.length<2) return showErr("autherr","Enter your name.");
-  if(!validEmail(email)) return showErr("autherr","Enter a valid email address.");
-  if(p.length<8) return showErr("autherr","Password must be at least 8 characters.");
-  if(p!==p2) return showErr("autherr","The two passwords don't match.");
-  if(wantsAdmin&&!pin) return showErr("autherr","Enter the admin PIN, or choose Normal user.");
-  $("#autherr").hidden=true; btn.disabled=true; btn.textContent="Creating…";
-  let res;
-  try{ res=await run(sb.auth.signUp({email:email,password:p,options:{data:{name:name}}})); }
-  catch(e){ showErr("autherr",friendly(e)); btn.disabled=false; btn.textContent="Create account"; return; }
-  if(!res||!res.session){
-    state.authTab="login"; state.authRole=wantsAdmin?"admin":"user";
-    state.authNote="Account created. Check your email and open the confirmation link, then log in."+(wantsAdmin?" Choose Admin when you log in to enter the PIN.":"");
-    renderAuth(); return;
-  }
-  let pinMsg="";
-  if(wantsAdmin){
-    try{
-      const r=await submitPin(pin);
-      if(!r.ok) pinMsg = r.reason==="wrong" ? "the PIN was wrong, so you are a normal user. Log out and log in as Admin to try again."
-        : r.reason==="locked" ? "the PIN is locked for a while after too many wrong tries, so you are a normal user."
-        : "admin sign-up is turned off, so you are a normal user. Ask an admin to make you an admin.";
-    }catch(e){ pinMsg="the PIN couldn't be checked, so you are a normal user."; }
-  }
-  await enterApp();
-  if(pinMsg) toast("Account created, but "+pinMsg,true);
+    await loadProfile();
+    if(!state.profile){
+      await sb.auth.signOut();
+      throw new Error("This account is not registered as a Brumac member. Ask an administrator to create your account.");
+    }
+    // The database role determines access. No role choice or PIN is needed.
+    await enterApp();
+  }catch(e){ showErr("autherr",friendly(e)); btn.disabled=false; btn.textContent="Log in"; }
 }
 async function doForgot(){
   const email=$("#fg-email").value.trim(), btn=$("#authbtn");
@@ -861,9 +783,9 @@ function resetToLogin(){
   state.settings={milkPrice:70,milkStock:0}; state.salesDate=todayStr(); state.sale={product:"milk",qty:"",time:"",query:"",open:false,hi:0};
   state.feed={}; state.feedDraft={}; state.careDate=todayStr();
   state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.costs=[]; state.casual={}; state.casualWorkers=[]; state.casualDate=todayStr(); state.casualDraft={};
-  state.members={list:[],allowAdminSignup:true,loaded:false,loading:false,error:""};
+  state.members={list:[],loaded:false,loading:false,error:""};
   state.shopQuery=""; state.herdQuery=""; state.feedEditing={}; state.milkEditing={};
-  state.draft={}; state.section="farm"; state.tab="log"; state.auth="out"; state.authTab="login"; state.authRole="user";
+  state.draft={}; state.section="farm"; state.tab="log"; state.auth="out"; state.authTab="login";
   renderAll();
 }
 async function logout(){
@@ -1821,9 +1743,9 @@ async function loadMembers(){
   state.members.loading=true;
   try{
     const d=await run(sb.rpc("members_overview"));
-    state.members={list:d.members||[],allowAdminSignup:!!d.allow_admin_signup,loaded:true,loading:false,error:""};
+    state.members={list:d.members||[],loaded:true,loading:false,error:""};
   }catch(e){
-    state.members={list:[],allowAdminSignup:true,loaded:true,loading:false,error:friendly(e)};
+    state.members={list:[],loaded:true,loading:false,error:friendly(e)};
   }
   scheduleRender();
 }
@@ -1863,13 +1785,12 @@ function renderMembers(){
     el.innerHTML='<div class="error" role="alert">Couldn\'t load the members. '+esc(M.error)+' <button class="link" data-act="reload-members">Try again</button></div>'; return;
   }
   const total=M.list.length, admins=M.list.filter(m=>m.role==="admin").length, users=total-admins;
-  el.innerHTML='<div class="logbar"><div><h2>Members</h2><p class="sub">Everyone who has registered. Click a member to open their card and manage their role.</p></div></div>'
+  el.innerHTML='<div class="logbar"><div><h2>Members</h2><p class="sub">All registered members. Create accounts, change account types and manage member access.</p></div><button class="btn" data-act="create-member">＋ Create member</button></div>'
     +'<p class="sumline"><b>'+total+' registered '+(total===1?"member":"members")+'</b>: '+admins+(admins===1?" admin":" admins")+' and '+users+(users===1?" normal user":" normal users")+'.</p>'
     +'<div class="ledger">'+M.list.map(memberRowHTML).join("")+'</div>'
     +'<div class="logbar" style="margin-top:30px"><div><h3 class="sec" style="margin:0">Roles</h3><p class="sub">Create extra roles, such as Storekeeper, and choose what each can do. Then assign a role to a member from their card.</p></div><button class="btn" data-act="role-create">Create role</button></div>'
     +rolesHTML(M.list)
-    +'<div class="switchrow"><label><input type="checkbox" id="admsignup"'+(M.allowAdminSignup?" checked":"")+'> Let new sign-ups become admins with the PIN</label>'
-    +'<p class="sub">When this is on, a new account that enters the correct admin PIN in its first 24 hours becomes an admin straight away. Turn it off once your admins are set up, so only existing admins can grant the role.</p></div>';
+    +'<div class="note" style="margin-top:20px">New accounts can only be created by administrators here. Account type is assigned automatically and applied at the next login.</div>';
 }
 async function setRole(id,role){
   try{ await run(sb.rpc("set_member_role",{p_user_id:id,p_role:role})); toast(role==="admin"?"Member is now an admin":"Member is now a normal user"); }
@@ -1941,11 +1862,6 @@ async function moveRole(id,dir){
     await run(sb.from("roles").update({position:a.position}).eq("id",b.id));
     await loadCore(); loadMembers(); scheduleRender();
   }catch(e){ toast("Couldn't reorder roles. "+friendly(e),true); }
-}
-async function setAdminSignup(on){
-  try{ await run(sb.rpc("set_admin_signup",{p_allow:on})); toast(on?"New sign-ups can become admins":"New sign-ups can no longer become admins"); }
-  catch(e){ toast("Couldn't change that setting. "+friendly(e),true); }
-  loadMembers();
 }
 
 /* ----- Summary ----- */
@@ -2044,6 +1960,7 @@ function renderDialog(){
   if(s.mode==="profile-edit"){ d.innerHTML=profileFormHTML(); return; }
   if(s.mode==="profile-email"){ d.innerHTML=emailFormHTML(); return; }
   if(s.mode==="profile-password"){ d.innerHTML=passwordFormHTML(); return; }
+  if(s.mode==="member-create"){ d.innerHTML=memberCreateHTML(); return; }
   if(s.mode==="member-card"){ const m=state.members.list.find(x=>x.id===s.id); if(!m){ closeDlg(); return; } d.innerHTML=memberCardHTML(m); return; }
   if(s.mode==="member-confirm"){ const m=state.members.list.find(x=>x.id===s.id); if(!m){ closeDlg(); return; } d.innerHTML=memberConfirmHTML(m); return; }
   if(s.mode==="cereal-confirm"){ const c=findCereal(s.id); if(!c){ closeDlg(); return; } d.innerHTML=cerealConfirmHTML(c); return; }
@@ -2153,6 +2070,28 @@ function me(){
 }
 function ownCardHTML(note){
   return cardHTML(me(),'<button class="btn ghost" data-act="change-password">Change password</button><button class="btn ghost" data-act="change-email">Change email</button><button class="btn" data-act="edit-profile">Edit details</button><button class="btn ghost" data-act="close">Close</button>',note);
+}
+function memberCreateHTML(){
+  return '<div class="dlg"><h2 style="margin-bottom:6px">Create member account</h2><p class="sub" style="margin-bottom:16px">Only administrators can create accounts. The selected account type will be assigned automatically at login.</p>'
+    +'<form id="membercreateform" novalidate><div class="stack">'
+    +'<div class="field"><label for="mc-name">Full name</label><input id="mc-name" type="text" maxlength="60" autocomplete="name" required></div>'
+    +'<div class="field"><label for="mc-email">Email address</label><input id="mc-email" type="email" autocomplete="email" required></div>'
+    +'<div class="field"><label for="mc-password">Temporary password <span class="hint">(at least 8 characters)</span></label><input id="mc-password" type="password" autocomplete="new-password" required></div>'
+    +'<div class="field"><label for="mc-role">Account type</label><select id="mc-role"><option value="user">Normal user</option><option value="admin">Administrator</option></select></div>'
+    +'</div><div class="error" id="formerr" role="alert" hidden></div><div class="actions"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Create account</button></div></form></div>';
+}
+async function createMember(){
+  const name=$("#mc-name").value.trim(), email=$("#mc-email").value.trim(), password=$("#mc-password").value, role=$("#mc-role").value;
+  const btn=$("#formsave"), err=$("#formerr");
+  if(name.length<2) return showErr("formerr","Enter a name of at least 2 characters.");
+  if(!validEmail(email)) return showErr("formerr","Enter a valid email address.");
+  if(password.length<8) return showErr("formerr","The password must be at least 8 characters.");
+  err.hidden=true; btn.disabled=true; btn.textContent="Creating account…";
+  try{
+    await run(sb.rpc("create_member",{p_email:email,p_password:password,p_name:name,p_role:role,p_role_id:null}));
+    closeDlg(); toast(role==="admin"?"Administrator account created":"Member account created");
+    state.members.loaded=false; await loadMembers();
+  }catch(e){ err.textContent="Couldn't create the account. "+friendly(e); err.hidden=false; btn.disabled=false; btn.textContent="Create account"; }
 }
 function memberCardHTML(m){
   const isAdmin=m.role==="admin";
@@ -2374,6 +2313,7 @@ document.addEventListener("click",e=>{
     case "change-email": openProfileForm("profile-email","e-email"); break;
     case "change-password": openProfileForm("profile-password","w-cur"); break;
     case "open-member": openMember(a.dataset.id); break;
+    case "create-member": state.dlg={mode:"member-create"}; renderDialog(); openDlg(); break;
     case "cancel-member-remove": openMember(state.dlg.id); break;
     case "pin-normal": continueAsNormal(); break;
     case "set-role": setRole(a.dataset.id,a.dataset.role); break;
@@ -2551,13 +2491,6 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
   const t=e.target;
-  if(t.name==="role"){
-    state.authRole=t.value;
-    const pf=$("#pinfield"); if(pf) pf.hidden=t.value!=="admin";
-    const el=$("#view-auth"); if(el) el.dataset.key=state.auth+"|"+state.authTab+"|"+state.authNote+"|"+state.authRole;
-    return;
-  }
-  if(t.id==="admsignup"){ setAdminSignup(t.checked); return; }
   if(t.id==="assignrole"){ assignRole(t.dataset.user,t.value||null); return; }
 
   if(t.id==="dailydate"){
@@ -2655,11 +2588,10 @@ document.addEventListener("submit",e=>{
   else if(id==="staffform"){ e.preventDefault(); saveStaff(); }
   else if(id==="costform"){ e.preventDefault(); saveCost(); }
   else if(id==="profileform"){ e.preventDefault(); saveProfile(); }
+  else if(id==="membercreateform"){ e.preventDefault(); createMember(); }
   else if(id==="emailform"){ e.preventDefault(); changeEmail(); }
   else if(id==="passwordform"){ e.preventDefault(); changePassword(); }
   else if(id==="loginform"){ e.preventDefault(); doLogin(); }
-  else if(id==="signupform"){ e.preventDefault(); doSignup(); }
-  else if(id==="pinform"){ e.preventDefault(); doPin(); }
   else if(id==="forgotform"){ e.preventDefault(); doForgot(); }
   else if(id==="recoveryform"){ e.preventDefault(); doRecovery(); }
 });
