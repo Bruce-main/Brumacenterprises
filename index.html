@@ -328,7 +328,7 @@ dialog[open]{animation:dlgIn .22s cubic-bezier(.2,.8,.3,1)}
    1. Paste your two Supabase values here (see README.md, step 4)
    ===================================================================== */
 const SUPABASE_URL = "https://cimzgmhemqkdqqlbxakx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";;
 
 /* ---------- Settings ---------- */
 // The milk price is stored in the database and admins change it in the app
@@ -462,7 +462,7 @@ function cowToRow(f){
     last_calving:f.lastCalving||null,insemination:f.insemination||null,bull:f.bull||null,pregnancy:f.pregnancy,
     weight_kg:f.weight!==""?parseFloat(f.weight):null,health:f.health||null,notes:f.notes||null};
 }
-function cerealFromRow(r){ return {id:r.id,name:r.name,unit:r.unit||"kg",price:Number(r.price_per_kg),qty:Number(r.qty_kg)}; }
+function cerealFromRow(r){ return {id:r.id,name:r.name,unit:r.unit||"kg",buyingPrice:Number(r.buying_price||0),price:Number(r.price_per_kg),qty:Number(r.qty_kg)}; }
 function saleFromRow(r){ return {id:r.id,kind:r.product_kind,cerealId:r.cereal_id,qty:Number(r.quantity),p:Number(r.price_per_unit),d:r.sold_on,ts:Date.parse(r.sold_at)||0,receipt:r.receipt_path||""}; }
 function fmtClock(ts){ const d=new Date(ts); return pad(d.getHours())+":"+pad(d.getMinutes()); }
 
@@ -1156,8 +1156,12 @@ function renderShopList(){
   }
   html+='<div class="ledger">'+rows.map(r=>{
     const out=r.qty<=0, attr='data-kind="'+r.kind+'" data-id="'+esc(r.id||"")+'"', uw=unitWord(r.unit);
-    const priceLine=esc(fmtKES(r.price)+" a "+(r.kind==="milk"?"litre":uw))
-      +(state.admin&&!out?", worth "+esc(fmtKES(r.qty*r.price)):"");
+    const priceLine=r.kind==="milk"
+      ? esc(fmtKES(r.price)+" a litre")
+      : (state.admin
+          ? 'Buying price: '+(r.buyingPrice>0?esc(fmtKES(r.buyingPrice)):'<span class="meta">Not set</span>')+' / '+uw+' <span class="meta">·</span> Selling price: '+esc(fmtKES(r.price))+' / '+uw
+          : 'Buying price: '+(r.buyingPrice>0?esc(fmtKES(r.buyingPrice)):'<span class="meta">Not set</span>')+' / '+uw)
+        +(state.admin&&!out?" · Stock value: "+esc(fmtKES(r.qty*r.price)):"");
     return '<div class="row"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
       +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+priceLine+'</div>'
       +(r.kind==="milk"?(state.admin?'<div class="pactions"><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit price</button></div>':""):(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':""))+'</div>'
@@ -1656,7 +1660,8 @@ async function recordSaleFromForm(){
       p_cereal_id:p.id,
       p_qty:round2(n),
       p_sold_at:when.toISOString(),
-      p_receipt_path:receiptPath
+      p_receipt_path:receiptPath,
+      p_pack_id:null
     }));
     state.sale.qty=""; state.sale.time=nowClock(); state.sale.query=""; state.sale.open=false; state.sale.hi=0;
     if($("#s-qty")) $("#s-qty").value="";
@@ -2045,7 +2050,8 @@ function cerealFormHTML(c){
   return '<div class="dlg"><h2 style="margin-bottom:14px">'+(c?"Edit product":"Add product")+'</h2><form id="cerealform" novalidate><div class="grid2">'
     +'<div class="field full"><label for="c-name">Product name</label><input type="text" id="c-name" maxlength="60" value="'+esc(c&&c.name)+'" placeholder="Maize, beans, rice, soap"></div>'
     +'<div class="field"><label for="c-unit">Sold by</label><select id="c-unit">'+UNITS.map(u=>'<option value="'+u[0]+'"'+(u[0]===unit?" selected":"")+'>'+esc(u[1])+'</option>').join("")+'</select></div>'
-    +'<div class="field"><label for="c-price">Price per unit <span class="hint">(KES)</span></label><input type="number" id="c-price" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.price)+'"></div>'
+    +'<div class="field"><label for="c-buying">Buying price per unit <span class="hint">(KES)</span></label><input type="number" id="c-buying" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.buyingPrice||0)+'"></div>'
+    +'<div class="field"><label for="c-price">Selling price per unit <span class="hint">(KES)</span></label><input type="number" id="c-price" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.price)+'"></div>'
     +'<div class="field"><label for="c-qty">Quantity remaining</label><input type="number" id="c-qty" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.qty)+'"></div>'
     +'</div><p class="sub" style="margin-top:12px">Enter the amount you have now. Sales lower it automatically, so change it only to restock or correct a count. A new price applies to future sales only.</p>'
     +'<div class="error" id="formerr" role="alert" hidden></div>'
@@ -2251,15 +2257,16 @@ async function deleteCow(){
 async function saveCereal(){
   const btn=document.getElementById("cerealsave");
   const g=id=>document.getElementById(id).value.trim();
-  const name=g("c-name"), unit=g("c-unit"), price=parseFloat(g("c-price")), qty=parseFloat(g("c-qty"));
+  const name=g("c-name"), unit=g("c-unit"), buyingPrice=parseFloat(g("c-buying")), price=parseFloat(g("c-price")), qty=parseFloat(g("c-qty"));
   const editing=state.dlg&&state.dlg.id?findCereal(state.dlg.id):null;
   if(!name) return showErr("formerr","Enter the product name.");
   if(state.cereals.find(c=>c.id!==(editing&&editing.id)&&String(c.name).toLowerCase()===name.toLowerCase())) return showErr("formerr",name+" is already in the list.");
   if(!UNITS.some(u=>u[0]===unit)) return showErr("formerr","Choose what it's sold by.");
-  if(!(price>0&&price<=MAX_KG)) return showErr("formerr","Enter a price per unit above 0, for example 120.");
+  if(!(buyingPrice>=0&&buyingPrice<=MAX_KG)) return showErr("formerr","Enter a buying price of 0 or more.");
+  if(!(price>0&&price<=MAX_KG)) return showErr("formerr","Enter a selling price per unit above 0, for example 120.");
   if(!(qty>=0&&qty<=1e7)) return showErr("formerr","Enter the quantity remaining, 0 or more.");
   document.getElementById("formerr").hidden=true; btn.disabled=true; btn.textContent="Saving…";
-  const row={name:name,unit:unit,price_per_kg:round2(price),qty_kg:round2(qty)};
+  const row={name:name,unit:unit,buying_price:round2(buyingPrice),price_per_kg:round2(price),qty_kg:round2(qty)};
   try{
     if(editing) needRows(await run(sb.from("cereals").update(row).eq("id",editing.id).select("id")));
     else await run(sb.from("cereals").insert(row));
