@@ -130,6 +130,16 @@ button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .row,.cow{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:13px 16px;border-top:1px solid var(--line);transition:background-color .12s ease}
 .row:first-child,.cow:first-child{border-top:0}
 .row:hover{background:var(--surface-2)}
+.shop-product-row{cursor:pointer}
+.shop-product-row:focus-visible{outline:2px solid var(--green);outline-offset:-2px}
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-md);display:flex;flex-direction:column;gap:12px}
+.pcard-head{display:flex;align-items:center;gap:12px}
+.product-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0}
+.product-detail{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface-2);display:flex;flex-direction:column;gap:4px}
+.product-detail span{font-size:12px;color:var(--ink-soft);font-weight:600}
+.product-detail strong{font-size:16px;font-variant-numeric:tabular-nums}
+@media(max-width:440px){.product-detail-grid{grid-template-columns:1fr}}
 .cow{width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;cursor:pointer}
 .cow:hover{background:var(--surface-2)}
 .cow:focus-visible{outline-offset:-3px}
@@ -314,6 +324,7 @@ dialog[open]{animation:dlgIn .22s cubic-bezier(.2,.8,.3,1)}
     <section id="view-costlog" role="tabpanel" hidden></section>
     <section id="view-summary" role="tabpanel" hidden></section>
     <section id="view-members" role="tabpanel" hidden></section>
+    <section id="view-locked" role="tabpanel" hidden></section>
   </main>
 </div>
 <dialog id="dlg" aria-label="Details"></dialog>
@@ -328,7 +339,7 @@ dialog[open]{animation:dlgIn .22s cubic-bezier(.2,.8,.3,1)}
    1. Paste your two Supabase values here (see README.md, step 4)
    ===================================================================== */
 const SUPABASE_URL = "https://cimzgmhemqkdqqlbxakx.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";;
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbXpnbWhlbXFrZHFxbGJ4YWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4Mjk0MDUsImV4cCI6MjEwNTQwNTQwNX0.SbMEFyOyRH9EnjEctFGowCqbcsOKFK4OKygjFB_Yheg";
 
 /* ---------- Settings ---------- */
 // The milk price is stored in the database and admins change it in the app
@@ -339,13 +350,28 @@ const MAX_KG = 100000;       // sanity limit for one cereal sale
 const STATUSES = [["milking","Milking"],["dry","Dry"],["heifer","Heifer"],["sold","Sold"],["deceased","Deceased"]];
 const PREG = [["unchecked","Not yet checked"],["pregnant","Confirmed pregnant"],["open","Not pregnant"]];
 const PERMS = [
+  ["see_farm","See the farm","Open the Farm section: milk log, herd, feed, milk sales and milk balance. Farm costs stay hidden unless Manage finance is also ticked."],
+  ["see_shop","See the shop","Open the Shop section: products and sales."],
   ["edit_herd","Edit the herd","Add, edit and delete cows."],
   ["manage_stock","Manage stock","Add and set stock quantities, and add, edit or delete shop products."],
   ["remove_sales","Remove sales","Remove a wrong sale. The quantity goes back into stock."],
-  ["manage_finance","Manage finance","Manage staff, casual labour, land and input costs."]
+  ["manage_finance","Manage finance","See and manage the cost log, farm costs, staff, casual labour, land and input costs."]
 ];
 const ROLE_COLORS = ["#2D6A4F","#7A5000","#A3352B","#1D4ED8","#7C3AED","#0891B2","#B45309","#4D7C0F"];
-const COST_CATS = [["land_preparation","Land preparation"],["seeds","Seeds"],["fertilizer","Fertilizer"],["manure","Manure"],["herbicides","Herbicides"],["other","Other"]];
+const COST_CATS = [
+  ["land_preparation","Land preparation"],
+  ["seeds","Seeds"],
+  ["fertilizer","Fertilizer"],
+  ["manure","Manure"],
+  ["herbicides","Herbicides"],
+  ["pesticides","Pesticides"],
+  ["veterinary","Veterinary"],
+  ["transport","Transport"],
+  ["equipment","Equipment"],
+  ["utilities","Utilities"],
+  ["feed_purchase","Feed purchase"],
+  ["other","Other"]
+];
 const BREEDS = ["Friesian","Ayrshire","Guernsey","Jersey","Sahiwal","Crossbreed"];
 
 /* ---------- State ---------- */
@@ -354,11 +380,11 @@ let sb=null;
 const state = {
   user:null, profile:null, admin:false, error:"", channel:null, recovery:false,
   auth:"loading",      // loading | config | out | pin | recovery | in
-  authTab:"login",     // login | forgot
+  authTab:"login",     // login | signup | forgot
   authNote:"",
   ready:false,
   cows:[], cereals:[], roles:[], milk:{}, milkPrices:{}, sales:[], loadedMonths:new Set(),
-  settings:{milkPrice:70,milkStock:0},
+  settings:{milkPrice:70,milkStock:0,farmName:"",location:"",farmNotes:""},
   salesDate:todayStr(), sale:{product:"milk",qty:"",time:"",query:"",open:false,hi:0}, editingAllocationId:null, costPeriod:"daily", costDate:todayStr(), costReport:null,
   feed:{}, feedDraft:{}, careDate:todayStr(),
   staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualWorkers:[], casualDate:todayStr(), casualDraft:{},
@@ -441,12 +467,14 @@ function statusPill(c){ return '<span class="pill '+esc(c.status||"")+'">'+esc(l
 
 function friendly(e){
   const m=(e&&e.message)||"", c=e&&e.code;
+  const perm=c==="42501"||/row-level security|permission denied/i.test(m);
   if(c==="23505") return "That tag or name is already in use.";
-  if(c==="42501"||/row-level security|permission denied/i.test(m)) return "You don't have permission for that. Ask an administrator to review your account access.";
+  if(perm) return "You don't have permission for that. Ask an administrator to review your account access."+(m?" ("+m+")":"");
   if(/Invalid login credentials/i.test(m)) return "Email or password is incorrect.";
   if(/Email not confirmed/i.test(m)) return "Confirm your email first using the link we sent, then log in.";
   if(/already (been )?registered/i.test(m)) return "An account with this email already exists. Log in instead.";
   if(/rate limit|too many/i.test(m)) return "Too many tries. Wait a minute and try again.";
+  if(/schema cache|could not find the function|PGRST202/i.test(m)) return "The database is missing a function the app expects. In Supabase, open SQL Editor, paste the latest supabase-setup.sql, and run it, then reload this page.";
   if(/Failed to fetch|NetworkError|network/i.test(m)) return "Can't reach the server. Check your internet connection.";
   return m||"Something went wrong. Try again.";
 }
@@ -526,7 +554,14 @@ function bars(items,aria,first,last){
     +items.map(i=>'<div class="bar'+(i.v>0?"":" zero")+'" style="height:'+(i.v>0?Math.max(3,i.v/top*100):0)+'%" title="'+esc(i.t)+'"></div>').join("")
     +'</div><div class="xl"><span>'+esc(first)+'</span><span>'+esc(last)+'</span></div></div>';
 }
-function showErr(id,msg){ const e=document.getElementById(id); if(e){ e.textContent=msg; e.hidden=false; } }
+function missingRpc(e){
+  const m=(e&&e.message)||"";
+  return /schema cache|could not find the function|PGRST202/i.test(m);
+}
+async function tryRpc(name, args){
+  try{ return await run(sb.rpc(name, args||{})); }
+  catch(e){ if(missingRpc(e)) return null; throw e; }
+}
 
 /* ---------- Database access ---------- */
 async function run(p){ const r=await p; if(r.error) throw r.error; return r.data; }
@@ -542,58 +577,129 @@ async function fetchAll(build){
 async function loadProfile(){
   const s=await sb.auth.getSession();
   state.user=s.data&&s.data.session?s.data.session.user:null;
-  if(!state.user){ state.profile=null; state.admin=false; return; }
-  let p=null;
-  try{ p=await run(sb.from("profiles").select("name,email,role,phone,job_title,area,created_at,role_id,roles(name,permissions,color)").eq("id",state.user.id).maybeSingle()); }catch(e){}
+  if(!state.user){ state.profile=null; state.admin=false; state.profileError=""; return; }
+  let p=null, firstError=null;
+  // Load the profile row independently of the optional roles relationship.
+  // A missing/ambiguous PostgREST relationship must not make a valid member
+  // appear to have no Brumac profile.
+  try{
+    p=await run(sb.from("profiles").select("id,name,email,role,phone,job_title,area,created_at,role_id").eq("id",state.user.id).maybeSingle());
+  }catch(e){ firstError=e; }
+  // Fallback to a narrowly scoped SECURITY DEFINER RPC if the profile
+  // SELECT policy is stale or the row is not visible through PostgREST.
+  if(!p){
+    try{
+      const fallback=await tryRpc("get_my_profile");
+      p=Array.isArray(fallback)?(fallback[0]||null):fallback;
+    }catch(e){ if(!firstError) firstError=e; }
+  }
+  // Last resort: ensure the profile row exists from server-controlled
+  // auth metadata, then try reading it again.
+  if(!p){
+    try{
+      await tryRpc("ensure_my_profile");
+      p=await run(sb.from("profiles").select("id,name,email,role,phone,job_title,area,created_at,role_id").eq("id",state.user.id).maybeSingle());
+      if(!p){
+        const fallback=await tryRpc("get_my_profile");
+        p=Array.isArray(fallback)?(fallback[0]||null):fallback;
+      }
+    }catch(e){ if(!firstError) firstError=e; }
+  }
+  if(p && p.role_id){
+    try{
+      const r=await run(sb.from("roles").select("name,permissions,color").eq("id",p.role_id).maybeSingle());
+      p.roles=r||null;
+    }catch(e){ p.roles=null; }
+  }
   state.profile=p;
+  state.profileError=firstError?friendly(firstError):"";
   state.admin=!!(p&&p.role==="admin");
 }
 function staffFromRow(r){ return {id:r.id,name:r.name,wage:Number(r.wage_amount),period:r.wage_period,active:r.active}; }
 function costFromRow(r){ return {id:r.id,category:r.category,description:r.description||"",amount:Number(r.amount),date:r.cost_date}; }
 
 async function loadCore(){
-  const res=await Promise.all([
-    run(sb.from("cows").select("*").order("tag")),
-    run(sb.from("cereals").select("*").order("name")),
-    run(sb.from("farm_settings").select("*").eq("id",1).maybeSingle()),
-    run(sb.from("roles").select("*").order("position").order("created_at")),
-    run(sb.from("staff").select("*").order("name")),
-    run(sb.from("land_settings").select("*").eq("id",1).maybeSingle())
+  async function one(q){
+    try{ return {ok:true, data:await q}; }
+    catch(e){ return {ok:false, error:e}; }
+  }
+  async function loadRoles(){
+    try{ return await run(sb.from("roles").select("*").order("position").order("created_at")); }
+    catch(e){
+      if(/position/i.test((e&&e.message)||"")) return await run(sb.from("roles").select("*").order("created_at"));
+      throw e;
+    }
+  }
+  const [cows, cereals, settings, roles, staff, land] = await Promise.all([
+    one(run(sb.from("cows").select("*").order("tag"))),
+    one(run(sb.from("cereals").select("*").order("name"))),
+    one(run(sb.from("farm_settings").select("*").eq("id",1).maybeSingle())),
+    one(loadRoles()),
+    one(run(sb.from("staff").select("*").order("name"))),
+    one(run(sb.from("land_settings").select("*").eq("id",1).maybeSingle()))
   ]);
-  state.cows=res[0].map(cowFromRow);
-  state.cereals=res[1].map(cerealFromRow);
-  if(res[2]) state.settings={milkPrice:Number(res[2].milk_price_per_litre),milkStock:Number(res[2].milk_stock_litres)};
-  state.roles=res[3]||[];
-  state.staff=res[4].map(staffFromRow);
-  if(res[5]) state.land={costPerAcre:Number(res[5].cost_per_acre),acresHired:Number(res[5].acres_hired)};
+  const required=[["Herd",cows],["Shop products",cereals],["Farm settings",settings]].filter(x=>!x[1].ok);
+  if(required.length){
+    const e=required[0][1].error||new Error("Couldn't load farm records");
+    e.message=required.map(x=>x[0]).join(", ")+": "+((e&&e.message)||"failed");
+    throw e;
+  }
+  state.cows=cows.data.map(cowFromRow);
+  state.cereals=cereals.data.map(cerealFromRow);
+  if(settings.data) state.settings={
+    milkPrice:Number(settings.data.milk_price_per_litre),
+    milkStock:Number(settings.data.milk_stock_litres),
+    farmName:settings.data.farm_name||"",
+    location:settings.data.location||"",
+    farmNotes:settings.data.farm_notes||""
+  };
+  const skipped=[];
+  if(roles.ok) state.roles=roles.data||[]; else skipped.push("roles");
+  if(staff.ok) state.staff=staff.data.map(staffFromRow); else { state.staff=[]; skipped.push("staff"); }
+  if(land.ok){ if(land.data) state.land={costPerAcre:Number(land.data.cost_per_acre),acresHired:Number(land.data.acres_hired)}; }
+  else skipped.push("land");
   await loadProfile();
-  // Force recalculation of today's milk stock so yesterday's leftover never
-  // appears as available when nothing has been recorded yet today.
   try{
     const stock=await run(sb.rpc("refresh_milk_stock"));
     if(typeof stock==="number") state.settings.milkStock=stock;
   }catch(e){ /* older database without the RPC: keep the value read above */ }
+  if(!skipped.length) return "";
+  const sample=(!roles.ok&&roles.error)||(!staff.ok&&staff.error)||(!land.ok&&land.error);
+  return "Some records could not be loaded ("+skipped.join(", ")+"). "+friendly(sample);
 }
 async function loadMonth(m){
   const start=m+"-01", end=m+"-"+pad(daysInMonth(m));
-  const res=await Promise.all([
-    fetchAll((a,b)=>sb.from("milk_entries").select("cow_id,entry_date,litres,price_per_litre").gte("entry_date",start).lte("entry_date",end).order("entry_date").order("cow_id").range(a,b)),
-    fetchAll((a,b)=>sb.from("sales").select("*").gte("sold_on",start).lte("sold_on",end).order("sold_at").order("id").range(a,b)),
-    fetchAll((a,b)=>sb.from("cow_feed").select("*").gte("entry_date",start).lte("entry_date",end).order("entry_date").order("cow_id").range(a,b)),
-    fetchAll((a,b)=>sb.from("casual_labor_days").select("*").gte("work_date",start).lte("work_date",end).order("work_date").range(a,b)),
-    fetchAll((a,b)=>sb.from("farm_costs").select("*").gte("cost_date",start).lte("cost_date",end).order("cost_date").range(a,b)),
-    fetchAll((a,b)=>sb.from("casual_workers").select("*").gte("work_date",start).lte("work_date",end).order("work_date").order("created_at").range(a,b))
+  async function one(q){
+    try{ return {ok:true, data:await q}; }
+    catch(e){ return {ok:false, error:e}; }
+  }
+  const [milk, sales, feed, casual, costs, workers] = await Promise.all([
+    one(fetchAll((a,b)=>sb.from("milk_entries").select("cow_id,entry_date,litres,price_per_litre").gte("entry_date",start).lte("entry_date",end).order("entry_date").order("cow_id").range(a,b))),
+    one(fetchAll((a,b)=>sb.from("sales").select("*").gte("sold_on",start).lte("sold_on",end).order("sold_at").order("id").range(a,b))),
+    one(fetchAll((a,b)=>sb.from("cow_feed").select("*").gte("entry_date",start).lte("entry_date",end).order("entry_date").order("cow_id").range(a,b))),
+    one(fetchAll((a,b)=>sb.from("casual_labor_days").select("*").gte("work_date",start).lte("work_date",end).order("work_date").range(a,b))),
+    one(fetchAll((a,b)=>sb.from("farm_costs").select("*").gte("cost_date",start).lte("cost_date",end).order("cost_date").range(a,b))),
+    one(fetchAll((a,b)=>sb.from("casual_workers").select("*").gte("work_date",start).lte("work_date",end).order("work_date").order("created_at").range(a,b)))
   ]);
+  const required=[["Milk log",milk],["Sales",sales]].filter(x=>!x[1].ok);
+  if(required.length){
+    const e=required[0][1].error||new Error("Couldn't load this month");
+    e.message=required.map(x=>x[0]).join(", ")+": "+((e&&e.message)||"failed");
+    throw e;
+  }
   for(const k of Object.keys(state.milk)) if(k.split("|")[1].slice(0,7)===m){ delete state.milk[k]; delete state.milkPrices[k]; }
-  res[0].forEach(r=>{ const k=r.cow_id+"|"+r.entry_date; state.milk[k]=Number(r.litres); if(r.price_per_litre!=null) state.milkPrices[k]=Number(r.price_per_litre); });
-  state.sales=state.sales.filter(x=>monthOf(x.d)!==m).concat(res[1].map(saleFromRow));
+  milk.data.forEach(r=>{ const k=r.cow_id+"|"+r.entry_date; state.milk[k]=Number(r.litres); if(r.price_per_litre!=null) state.milkPrices[k]=Number(r.price_per_litre); });
+  state.sales=state.sales.filter(x=>monthOf(x.d)!==m).concat(sales.data.map(saleFromRow));
   for(const k of Object.keys(state.feed)) if(k.split("|")[1].slice(0,7)===m) delete state.feed[k];
-  res[2].forEach(r=>{ state.feed[r.cow_id+"|"+r.entry_date]={silage:Number(r.silage_kg),other:Number(r.other_fodder_kg),otherType:r.other_fodder_type||"",meal:Number(r.dairy_meal_kg),supplement:Number(r.supplement_kg),silageCost:Number(r.silage_cost_per_kg||0),otherCost:Number(r.other_fodder_cost_per_kg||0),mealCost:Number(r.dairy_meal_cost_per_kg||0),supplementCost:Number(r.supplement_cost_per_kg||0)}; });
+  if(feed.ok) feed.data.forEach(r=>{ state.feed[r.cow_id+"|"+r.entry_date]={silage:Number(r.silage_kg),other:Number(r.other_fodder_kg),otherType:r.other_fodder_type||"",meal:Number(r.dairy_meal_kg),supplement:Number(r.supplement_kg),silageCost:Number(r.silage_cost_per_kg||0),otherCost:Number(r.other_fodder_cost_per_kg||0),mealCost:Number(r.dairy_meal_cost_per_kg||0),supplementCost:Number(r.supplement_cost_per_kg||0)}; });
   for(const k of Object.keys(state.casual)) if(k.slice(0,7)===m) delete state.casual[k];
-  res[3].forEach(r=>{ state.casual[r.work_date]={count:r.casual_count,wage:Number(r.daily_wage)}; });
-  state.costs=state.costs.filter(x=>monthOf(x.date)!==m).concat(res[4].map(costFromRow));
-  state.casualWorkers=state.casualWorkers.filter(x=>monthOf(x.work_date)!==m).concat(res[5]||[]);
+  if(casual.ok) casual.data.forEach(r=>{ state.casual[r.work_date]={count:r.casual_count,wage:Number(r.daily_wage)}; });
+  if(costs.ok) state.costs=state.costs.filter(x=>monthOf(x.date)!==m).concat(costs.data.map(costFromRow));
+  if(workers.ok) state.casualWorkers=state.casualWorkers.filter(x=>monthOf(x.work_date)!==m).concat(workers.data||[]);
   state.loadedMonths.add(m);
+  const skipped=[["feed",feed],["casual labour",casual],["costs",costs],["casual workers",workers]].filter(x=>!x[1].ok);
+  if(!skipped.length) return "";
+  return "Some records could not be loaded ("+skipped.map(x=>x[0]).join(", ")+"). "+friendly(skipped[0][1].error);
 }
 const loadingMonths=new Set();
 async function ensureMonth(m){
@@ -609,11 +715,11 @@ async function reloadAll(){
   reloading=true;
   try{
     const wasAdmin=state.admin;
-    await loadCore();
-    await Promise.all(Array.from(state.loadedMonths).map(loadMonth));
+    const w1=await loadCore();
+    const ws=await Promise.all(Array.from(state.loadedMonths).map(loadMonth));
     if(state.admin&&state.tab==="members") await loadMembers();
     if(wasAdmin&&!state.admin) toast("Your administrator access was changed. The page permissions have been updated.",true);
-    state.error="";
+    state.error=[w1].concat(ws).filter(Boolean).join(" ");
   }catch(e){}
   reloading=false; scheduleRender();
 }
@@ -627,6 +733,8 @@ let rafId=0;
 function scheduleRender(){ if(rafId) return; rafId=requestAnimationFrame(()=>{ rafId=0; renderAll(); }); }
 
 function renderWho(){
+  const brand=$("#farmname");
+  if(brand) brand.textContent=(state.ready && state.settings.farmName) ? state.settings.farmName : "Brumac Enterprises";
   if(state.auth!=="in"){ $("#who").innerHTML=""; return; }
   const pr=state.profile||{}, r=pr.roles;
   $("#who").innerHTML = pillStackHTML(r&&r.name,r&&r.color,state.admin)
@@ -634,14 +742,39 @@ function renderWho(){
     +'<button class="btn ghost small" data-act="logout">Log out</button>';
 }
 
-const VIEWS=["log","herd","feed","daily","balances","farm","costlog","summary","members"];
+const VIEWS=["log","herd","feed","daily","balances","farm","costlog","summary","members","locked"];
 // Which page each section shows, and the label each tab takes in that section
 // (the "daily" and "balances" pages are shared, filtered to that section's products)
 const SECTION_TABS={
   farm:[["log","Milk log"],["herd","Herd"],["feed","Feed"],["daily","Milk sales & use"],["balances","Milk balance"],["costlog","Cost log"],["farm","Farm costs"]],
   shop:[["balances","Products"],["daily","Sales"]]
 };
-function sectionOf(tab){ return tab==="summary"?"summary":tab==="members"?"members":state.section; }
+function canSeeFarm(){ return can("see_farm"); }
+function canSeeShop(){ return can("see_shop"); }
+function canSeeCosts(){ return can("manage_finance"); }
+function sectionAllowed(section){
+  if(section==="members") return !!state.admin;
+  if(section==="summary") return canSeeFarm() && canSeeShop();
+  if(section==="farm") return canSeeFarm();
+  if(section==="shop") return canSeeShop();
+  return false;
+}
+function tabsFor(section){
+  const tabs=SECTION_TABS[section];
+  if(!tabs) return null;
+  if(section==="farm" && !canSeeCosts()) return tabs.filter(t=>t[0]!=="costlog" && t[0]!=="farm");
+  return tabs;
+}
+function lockedHTML(section){
+  const what=section==="shop"?"the shop":section==="farm"?"the farm":section==="summary"?"the summary":"this page";
+  const both=!canSeeFarm() && !canSeeShop();
+  return '<div class="auth" style="margin-top:12px"><h2>This page is not available</h2><p class="sub">'
+    +(both
+      ? "Your account can sign in, but you have not been given a role that opens the farm or the shop. Ask an administrator to assign a role with See the farm, See the shop, or both."
+      : "You do not have access to "+what+". Ask an administrator to assign a role that includes it. Admins can open both the farm and the shop without an extra role.")
+    +'</p></div>';
+}
+function sectionOf(tab){ return tab==="summary"?"summary":tab==="members"?"members":tab==="locked"?"locked":state.section; }
 function renderAll(){
   renderWho(); renderBanner();
   const inApp=state.auth==="in";
@@ -652,11 +785,26 @@ function renderAll(){
     $("#subtabs").hidden=true;
     renderAuth(); return;
   }
+  $("#sec-farm").hidden=false;
+  $("#sec-shop").hidden=false;
+  $("#sec-summary").hidden=!(canSeeFarm() && canSeeShop());
   $("#sec-members").hidden=!state.admin;
-  if(state.section==="members"&&!state.admin) state.section="farm";
+  if(state.section==="members" && !state.admin){
+    state.section = canSeeFarm() ? "farm" : canSeeShop() ? "shop" : "locked";
+  } else if(state.section==="summary" && !sectionAllowed("summary")){
+    state.section = canSeeFarm() ? "farm" : canSeeShop() ? "shop" : "locked";
+  }
   document.querySelectorAll('.tabs:not(.sub) > .tab').forEach(b=>b.setAttribute("aria-selected",String(b.dataset.section===state.section)));
 
-  const subEl=$("#subtabs"), tabs=SECTION_TABS[state.section];
+  const subEl=$("#subtabs"), tabs=tabsFor(state.section);
+  const pageDenied=state.section==="locked" || ((state.section==="farm" || state.section==="shop") && !sectionAllowed(state.section));
+  if(pageDenied){
+    subEl.hidden=true; subEl.innerHTML="";
+    VIEWS.forEach(t=>{ $("#view-"+t).hidden = t!=="locked"; });
+    $("#view-locked").innerHTML=lockedHTML(state.section==="locked"?"none":state.section);
+    if(state.dlg && ["detail","profile","member-card"].indexOf(state.dlg.mode)>=0) renderDialog();
+    return;
+  }
   if(tabs){
     if(!tabs.some(t=>t[0]===state.tab)) state.tab=tabs[0][0];
     subEl.hidden=false;
@@ -675,6 +823,7 @@ function renderAll(){
   else if(state.tab==="farm") renderFarm();
   else if(state.tab==="costlog") renderCostLog();
   else if(state.tab==="members") renderMembers();
+  else if(state.tab==="locked") { $("#view-locked").innerHTML=lockedHTML("none"); }
   else renderSummary();
   if(state.dlg && ["detail","profile","member-card"].indexOf(state.dlg.mode)>=0) renderDialog();
 }
@@ -710,11 +859,18 @@ function renderAuth(){
       +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Send reset link</button></form>'
       +'<div class="authfoot"><button class="link" data-authtab="login">Back to log in</button></div>';
   } else {
-    inner='<h2>Log in</h2><p class="sub">Sign in with the account created for you by a Brumac administrator.</p>'+note
+    // login (and any stray "signup" request)
+    if(state.authTab==="signup"){
+      state.authTab="login";
+      state.authNote="New accounts are created by an administrator from the Members page. Contact your farm admin for access.";
+      note = state.authNote ? '<div class="note" role="status">'+esc(state.authNote)+'</div>' : '';
+    }
+    inner='<h2>Log in</h2><p class="sub">Sign in with your Brumac account.</p>'+note
       +'<form id="loginform" class="stack" novalidate style="margin-top:16px"><div class="field"><label for="li-email">Email</label><input type="email" id="li-email" autocomplete="username"></div>'
       +'<div class="field"><label for="li-pass">Password</label><input type="password" id="li-pass" autocomplete="current-password"></div>'
       +'<div class="error" id="autherr" role="alert" hidden></div><button type="submit" class="btn" id="authbtn">Log in</button></form>'
-      +'<div class="authfoot"><button class="link" data-authtab="forgot">Forgot your password?</button></div>';
+      +'<div class="authfoot"><button class="link" data-authtab="forgot">Forgot your password?</button></div>'
+      +'<p class="sub" style="margin-top:14px;text-align:center">Need an account? Ask a Brumac administrator to create one for you on the Members page.</p>';
   }
   el.innerHTML='<div class="auth">'+inner+'</div>';
   const first=el.querySelector('input[type=email],input[type=password],input[type=text]'); if(first&&state.auth!=="config") try{ first.focus(); }catch(e){}
@@ -728,15 +884,23 @@ async function doLogin(){
   $("#autherr").hidden=true; btn.disabled=true; btn.textContent="Logging in…";
   try{
     await run(sb.auth.signInWithPassword({email:email,password:pass}));
+    // Optional repair if the profile row is missing. Older databases may not
+    // have this function in the API schema cache yet — don't block login.
+    try{ await tryRpc("ensure_my_profile"); }catch(e){}
     await loadProfile();
     if(!state.profile){
+      const detail=state.profileError?" "+state.profileError:"";
       await sb.auth.signOut();
-      throw new Error("This account is not registered as a Brumac member. Ask an administrator to create your account.");
+      throw new Error("We could not find this account's Brumac profile. Run the latest Supabase SQL update, then try again."+detail);
     }
     // The database role determines access. No role choice or PIN is needed.
     await enterApp();
   }catch(e){ showErr("autherr",friendly(e)); btn.disabled=false; btn.textContent="Log in"; }
 }
+async function doSignUp(){
+  showErr("autherr","Public registration is disabled. Ask a Brumac administrator to create your account from the Members page.");
+}
+
 async function doForgot(){
   const email=$("#fg-email").value.trim(), btn=$("#authbtn");
   if(!validEmail(email)) return showErr("autherr","Enter a valid email address.");
@@ -764,12 +928,16 @@ async function doRecovery(){
 async function enterApp(){
   state.error=""; state.ready=false; state.members.loaded=false;
   await loadProfile();
-  state.auth="in"; state.section="farm"; state.tab="log"; state.authNote="";
+  state.auth="in";
+  state.section = canSeeFarm() ? "farm" : canSeeShop() ? "shop" : "locked";
+  state.tab = state.section==="shop" ? "balances" : "log";
+  state.authNote="";
   renderAll();
   const cur=todayStr().slice(0,7);
   try{
-    await Promise.all([loadCore(),loadMonth(cur),loadMonth(shiftMonth(cur,-1))]);
+    const warnings=await Promise.all([loadCore(),loadMonth(cur),loadMonth(shiftMonth(cur,-1))]);
     state.ready=true;
+    state.error=warnings.filter(Boolean).join(" ");
   }catch(e){ state.error=friendly(e); }
   renderAll();
   subscribeRealtime();
@@ -1110,7 +1278,7 @@ const UNIT_WORD={kg:"kg",litre:"litre",piece:"piece",bag:"bag",bunch:"bunch",pac
 function unitWord(u){ return UNIT_WORD[u]||u; }
 function allStockRows(){
   const rows=[{kind:"milk",id:null,name:"Milk",unit:"L",price:milkPrice(),qty:state.settings.milkStock}];
-  sortedCereals().forEach(c=>rows.push({kind:"cereal",id:c.id,name:c.name,unit:c.unit,price:c.price,qty:c.qty}));
+  sortedCereals().forEach(c=>rows.push({kind:"cereal",id:c.id,name:c.name,unit:c.unit,price:c.price,buyingPrice:c.buyingPrice||0,qty:c.qty}));
   return rows;
 }
 // Farm's balance page shows only milk; Shop's shows only shop products
@@ -1138,6 +1306,35 @@ function filteredShopRows(){
   }
   return rows;
 }
+function shopProductCardHTML(c){
+  if(!c) return '<div class="dlg"><p>Product not found.</p><button class="btn ghost" data-act="close">Close</button></div>';
+  const uw=unitWord(c.unit), admin=!!state.admin;
+  return '<div class="dlg shop-product-card"><h2>'+esc(c.name)+'</h2>'
+    +'<p class="sub">Product details</p><div class="product-detail-grid">'
+    +'<div class="product-detail"><span>Unit</span><strong>'+esc(uw)+'</strong></div>'
+    +'<div class="product-detail"><span>Available stock</span><strong>'+fmtL(Math.max(0,c.qty))+' '+esc(c.unit)+'</strong></div>'
+    +'<div class="product-detail"><span>Buying price</span><strong>'+(c.buyingPrice>0?esc(fmtKES(c.buyingPrice)):'Not set')+' / '+esc(uw)+'</strong></div>'
+    +(admin?'<div class="product-detail"><span>Selling price</span><strong>'+esc(fmtKES(c.price))+' / '+esc(uw)+'</strong></div>':'')
+    +'</div>'+(admin?'<p class="sub">Profit per unit: '+esc(fmtKES(c.price-(c.buyingPrice||0)))+'</p>':'')
+    +'<div class="actions">'+(admin?'<button class="btn" data-act="shop-card-edit" data-id="'+esc(c.id)+'">Edit product</button>':'')
+    +'<button class="btn ghost" data-act="close">Close</button></div></div>';
+}
+function productCardHTML(r, ms){
+  const out=r.qty<=0, uw=unitWord(r.unit), admin=!!state.admin;
+  const attr='data-kind="'+r.kind+'" data-id="'+esc(r.id||"")+'"';
+  return '<article class="pcard">'
+    +'<div class="pcard-head"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
+    +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">Sold by '+esc(uw)+(out?' · Out of stock':'')+'</div></div></div>'
+    +'<div class="product-detail-grid">'
+    +'<div class="product-detail"><span>In stock</span><strong>'+fmtL(Math.max(0,r.qty))+' '+esc(r.unit)+'</strong></div>'
+    +'<div class="product-detail"><span>Selling price</span><strong>'+esc(fmtKES(r.price))+'</strong></div>'
+    +(admin?'<div class="product-detail"><span>Buying price</span><strong>'+(r.buyingPrice>0?esc(fmtKES(r.buyingPrice)):'Not set')+'</strong></div>'
+      +'<div class="product-detail"><span>Stock value</span><strong>'+esc(fmtKES(Math.max(0,r.qty)*r.price))+'</strong></div>':'')
+    +'</div>'
+    +(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button>'
+      +(admin?'<button class="btn small" data-act="edit-cereal" data-id="'+esc(r.id)+'">Edit</button>':'')+'</div>':'')
+    +'</article>';
+}
 function renderShopList(){
   const list=$("#bal-list"); if(!list) return;
   const inShop=state.section==="shop", ms=can("manage_stock"), rows=filteredShopRows();
@@ -1148,6 +1345,12 @@ function renderShopList(){
   }
   if(!rows.length){
     list.innerHTML='<div class="ledger"><div class="empty"><p>No products match “'+esc((state.shopQuery||"").trim())+'”.</p></div></div>';
+    return;
+  }
+  if(inShop){
+    let html=(state.admin)?'<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>':"";
+    html+='<div class="product-grid">'+rows.map(r=>productCardHTML(r, ms)).join("")+'</div>';
+    list.innerHTML=html;
     return;
   }
   let html=(state.admin&&inShop)?'<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>':"";
@@ -1162,7 +1365,7 @@ function renderShopList(){
           ? 'Buying price: '+(r.buyingPrice>0?esc(fmtKES(r.buyingPrice)):'<span class="meta">Not set</span>')+' / '+uw+' <span class="meta">·</span> Selling price: '+esc(fmtKES(r.price))+' / '+uw
           : 'Buying price: '+(r.buyingPrice>0?esc(fmtKES(r.buyingPrice)):'<span class="meta">Not set</span>')+' / '+uw)
         +(state.admin&&!out?" · Stock value: "+esc(fmtKES(r.qty*r.price)):"");
-    return '<div class="row"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
+    return '<div class="row shop-product-row" data-act="shop-product-card" data-id="'+esc(r.id||"")+'" role="button" tabindex="0" title="View product details"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
       +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+priceLine+'</div>'
       +(r.kind==="milk"?(state.admin?'<div class="pactions"><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit price</button></div>':""):(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':""))+'</div>'
       +'<div class="entry"><div class="bal">'+fmtL(Math.max(0,r.qty))+' <small>'+r.unit+'</small></div>'+(out?'<span class="pill due">Out of stock</span>':"")+'</div></div>';
@@ -1283,7 +1486,7 @@ function casualDraftVal(field){
   const v=casualNow()[field]; return v?String(v):"";
 }
 function costFormHTML(){
-  return '<div class="dlg"><h2 style="margin-bottom:14px">Add a cost</h2><form id="costform" novalidate><div class="stack">'
+  return '<div class="dlg"><h2 style="margin-bottom:14px">Add farm expenditure</h2><form id="costform" novalidate><div class="stack">'
     +'<div class="field"><label for="co-cat">Category</label><select id="co-cat">'+COST_CATS.map(c=>'<option value="'+c[0]+'">'+c[1]+'</option>').join("")+'</select></div>'
     +'<div class="field"><label for="co-desc">Description <span class="hint">(optional)</span></label><input type="text" id="co-desc" maxlength="200"></div>'
     +'<div class="grid2"><div class="field"><label for="co-amount">Amount <span class="hint">(KES)</span></label><input type="number" id="co-amount" inputmode="decimal" min="0" step="any"></div>'
@@ -1299,11 +1502,11 @@ async function saveCost(){
   document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
   try{
     await run(sb.from("farm_costs").insert({category:cat,description:desc||null,amount:round2(amount),cost_date:date}));
-    await loadMonth(monthOf(date)); closeDlg(); toast("Cost added"); scheduleRender();
+    await loadMonth(monthOf(date)); closeDlg(); toast("Expenditure recorded"); scheduleRender();
   }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,"Add cost"); }
 }
 async function deleteCost(id){
-  try{ needRows(await run(sb.from("farm_costs").delete().eq("id",id).select("id"))); await Promise.all(Array.from(state.loadedMonths).map(loadMonth)); toast("Cost removed"); }
+  try{ needRows(await run(sb.from("farm_costs").delete().eq("id",id).select("id"))); await Promise.all(Array.from(state.loadedMonths).map(loadMonth)); toast("Expenditure removed"); }
   catch(e){ toast("Couldn't remove the cost. "+friendly(e),true); }
   scheduleRender();
 }
@@ -1349,6 +1552,40 @@ async function saveCasual(){
 }
 function formBusyId(id,on,label){ const b=document.getElementById(id); if(b){ b.disabled=on; b.textContent=label; } }
 
+
+async function saveFarmIdentity(){
+  if(!(state.admin || can("manage_finance"))) return toast("You can't change farm details.", true);
+  const name=($("#farm-name")&&$("#farm-name").value||"").trim();
+  const location=($("#farm-location")&&$("#farm-location").value||"").trim();
+  const notes=($("#farm-notes")&&$("#farm-notes").value||"").trim();
+  const err=$("#farmid-err");
+  if(name && (name.length<2 || name.length>80)){
+    if(err){ err.textContent="Farm name must be 2 to 80 characters, or leave it blank."; err.hidden=false; }
+    return;
+  }
+  if(location.length>120){ if(err){ err.textContent="Location is too long."; err.hidden=false; } return; }
+  if(notes.length>500){ if(err){ err.textContent="Notes are too long."; err.hidden=false; } return; }
+  if(err) err.hidden=true;
+  const btn=$("#savefarmid"); if(btn){ btn.disabled=true; btn.textContent="Saving…"; }
+  try{
+    await run(sb.rpc("set_farm_identity",{
+      p_name: name||null,
+      p_location: location||null,
+      p_notes: notes||null
+    }));
+    state.settings.farmName=name;
+    state.settings.location=location;
+    state.settings.farmNotes=notes;
+    toast("Farm details saved");
+    renderWho();
+    renderFarm();
+  }catch(e){
+    if(err){ err.textContent="Couldn't save. "+friendly(e); err.hidden=false; }
+    else toast("Couldn't save farm details. "+friendly(e), true);
+  }
+  if(btn){ btn.disabled=false; btn.textContent="Save farm details"; }
+}
+
 async function saveLand(){
   const cpa=parseFloat(document.getElementById("land-cpa").value), acres=parseFloat(document.getElementById("land-acres").value);
   const errEl=$("#landerr");
@@ -1366,11 +1603,27 @@ async function saveLand(){
 function renderFarm(){
   const el=$("#view-farm");
   if(!state.ready){ el.innerHTML=""; return; }
+  if(!canSeeCosts()){ el.innerHTML=lockedHTML("farm"); return; }
   ensureMonth(monthOf(state.casualDate));
   const fin=can("manage_finance");
-  let html='<h2>Farm costs</h2><p class="sub" style="margin:4px 0 20px">Staff, casual labour, land and input costs. '+(fin?"":"Admins keep this up to date.")+'</p>';
+  let html='<h2>Farm costs</h2><p class="sub" style="margin:4px 0 20px">Staff, casual labour, land, inputs and every farm expenditure. '+(fin?"":"Admins and finance roles keep this up to date.")+'</p>';
 
-  html+='<div class="finsec"><h3 class="sec" style="margin-top:0">Permanent staff</h3>'
+  // Farm identity (name, location, notes) — different holdings can be labelled clearly
+  html+='<div class="finsec"><h3 class="sec" style="margin-top:0">Farm identity</h3><p class="sub" style="margin:0 0 12px">Name, location and notes for this holding (size, crops, or site). Useful when you manage more than one farm.</p>';
+  if(fin || state.admin){
+    html+='<div class="salecard" style="margin-bottom:0"><div class="grid2">'
+      +'<div class="field"><label for="farm-name">Farm name</label><input type="text" id="farm-name" maxlength="80" value="'+esc(state.settings.farmName||"")+'" placeholder="e.g. Brumac Main, North Paddock"></div>'
+      +'<div class="field"><label for="farm-location">Location / area</label><input type="text" id="farm-location" maxlength="120" value="'+esc(state.settings.location||"")+'" placeholder="Town, county or site"></div>'
+      +'<div class="field full"><label for="farm-notes">Notes <span class="hint">(size, crops, herds, etc.)</span></label><textarea id="farm-notes" maxlength="500" placeholder="Acres, main crops, herd size…">'+esc(state.settings.farmNotes||"")+'</textarea></div>'
+      +'</div><div class="error" id="farmid-err" role="alert" hidden></div><button class="btn" style="margin-top:12px" id="savefarmid" data-act="save-farm-identity">Save farm details</button></div>';
+  } else {
+    const nm=state.settings.farmName||"Not set", loc=state.settings.location||"—", notes=state.settings.farmNotes||"";
+    html+='<div class="landgrid"><div><div class="meta">Farm name</div><div class="nm">'+esc(nm)+'</div></div><div><div class="meta">Location</div><div class="nm">'+esc(loc)+'</div></div>'
+      +(notes?'<div class="field full" style="grid-column:1/-1"><div class="meta">Notes</div><div class="nm">'+esc(notes)+'</div></div>':"")+'</div>';
+  }
+  html+='</div>';
+
+  html+='<div class="finsec"><h3 class="sec">Permanent staff</h3>'
     +(state.staff.length?'<div class="ledger">'+state.staff.map(staffRowHTML).join("")+'</div>':'<div class="ledger"><div class="empty"><p>No permanent staff added yet.</p></div></div>')
     +(fin?'<p style="margin-top:10px"><button class="btn ghost small" data-act="staff-add">Add staff</button></p>':"")+'</div>';
 
@@ -1393,8 +1646,8 @@ function renderFarm(){
   }
   html+='</div><p class="sumline">Total land cost: <b>'+fmtKES(state.land.costPerAcre*state.land.acresHired)+'</b></p></div>';
 
-  html+='<div class="finsec"><div class="logbar"><div><h3 class="sec" style="margin:0">Land preparation and inputs</h3><p class="sub">Seeds, fertilizer, manure and herbicides.</p></div>'
-    +(fin?'<button class="btn" data-act="cost-add">Add cost</button>':"")+'</div>';
+  html+='<div class="finsec"><div class="logbar"><div><h3 class="sec" style="margin:0">Inputs and farm expenditures</h3><p class="sub">Seeds, land preparation, fertilizer, manure, herbicides, pesticides, veterinary, transport, equipment, utilities, feed and any other cost — each recorded independently.</p></div>'
+    +(fin?'<button class="btn" data-act="cost-add">Add expenditure</button>':"")+'</div>';
   const costs=state.costs.slice().sort((a,b)=>b.date<a.date?-1:b.date>a.date?1:0);
   if(!costs.length){
     html+='<div class="ledger"><div class="empty"><p>No costs recorded yet.</p></div></div>';
@@ -1707,6 +1960,7 @@ function costRange(period, anchor){
 }
 function renderCostLog(force){
   const el=$("#view-costlog"); if(!el||!state.ready) return;
+  if(!canSeeCosts()){ el.innerHTML=lockedHTML("farm"); return; }
   if(!el.querySelector("#costperiod")||force===true){
     el.innerHTML='<div class="logbar"><div><h2>Cost log</h2><p class="sub">Review feed input and casual labour costs for a day, week, month or year. Feed costs are quantity used × saved unit cost.</p></div>'
       +'<div class="grid2" style="min-width:min(100%,360px)"><div class="field"><label for="costperiod">Period</label><select id="costperiod"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="annual">Annual</option></select></div>'
@@ -1793,7 +2047,7 @@ function renderMembers(){
   el.innerHTML='<div class="logbar"><div><h2>Members</h2><p class="sub">All registered members. Create accounts, change account types and manage member access.</p></div><button class="btn" data-act="create-member">＋ Create member</button></div>'
     +'<p class="sumline"><b>'+total+' registered '+(total===1?"member":"members")+'</b>: '+admins+(admins===1?" admin":" admins")+' and '+users+(users===1?" normal user":" normal users")+'.</p>'
     +'<div class="ledger">'+M.list.map(memberRowHTML).join("")+'</div>'
-    +'<div class="logbar" style="margin-top:30px"><div><h3 class="sec" style="margin:0">Roles</h3><p class="sub">Create extra roles, such as Storekeeper, and choose what each can do. Then assign a role to a member from their card.</p></div><button class="btn" data-act="role-create">Create role</button></div>'
+    +'<div class="logbar" style="margin-top:30px"><div><h3 class="sec" style="margin:0">Roles</h3><p class="sub">Create a role and choose whether it opens the farm, the shop, or both. Cost log and farm costs stay limited to admins and anyone with Manage finance.</p></div><button class="btn" data-act="role-create">Create role</button></div>'
     +rolesHTML(M.list)
     +'<div class="note" style="margin-top:20px">New accounts can only be created by administrators here. Account type is assigned automatically and applied at the next login.</div>';
 }
@@ -1816,15 +2070,17 @@ async function assignRole(userId,roleId){
 }
 function roleFormHTML(r){
   const have=(r&&r.permissions)||[], color=(r&&r.color)||ROLE_COLORS[state.roles.length%ROLE_COLORS.length];
-  return '<div class="dlg"><h2 style="margin-bottom:6px">'+(r?"Edit role":"Create a role")+'</h2><p class="sub" style="margin-bottom:14px">Everyone can already view, record milk and record sales. Tick anything extra this role can do.</p>'
+  const access=PERMS.filter(pm=>pm[0]==="see_farm"||pm[0]==="see_shop");
+  const extra=PERMS.filter(pm=>pm[0]!=="see_farm"&&pm[0]!=="see_shop");
+  const boxes=list=>list.map(pm=>'<label class="perm"><input type="checkbox" name="perm" value="'+pm[0]+'"'+(have.indexOf(pm[0])>=0?" checked":"")+'><div><b>'+esc(pm[1])+'</b><span>'+esc(pm[2])+'</span></div></label>').join("");
+  return '<div class="dlg"><h2 style="margin-bottom:6px">'+(r?"Edit role":"Create a role")+'</h2><p class="sub" style="margin-bottom:14px">Choose whether people with this role can open the farm, the shop, or both. Admins always see both. A normal user with no matching role sees a notice instead of that page.</p>'
     +'<form id="roleform" novalidate><div class="stack"><div class="field"><label for="r-name">Role name</label><input type="text" id="r-name" maxlength="40" placeholder="Storekeeper" value="'+esc(r&&r.name)+'"></div>'
     +'<div class="field"><label for="r-desc">Description <span class="hint">(optional)</span></label><input type="text" id="r-desc" maxlength="200" value="'+esc(r&&r.description)+'"></div>'
     +'<fieldset><legend>Colour</legend><div class="colorpick">'
     +ROLE_COLORS.map(c=>'<label style="background:'+c+'"><input type="radio" name="rcolor" value="'+c+'"'+(c===color?" checked":"")+'></label>').join("")
     +'</div></fieldset>'
-    +'<fieldset><legend>Extra permissions</legend><div class="permlist">'
-    +PERMS.map(pm=>'<label class="perm"><input type="checkbox" name="perm" value="'+pm[0]+'"'+(have.indexOf(pm[0])>=0?" checked":"")+'><div><b>'+esc(pm[1])+'</b><span>'+esc(pm[2])+'</span></div></label>').join("")
-    +'</div></fieldset></div><div class="error" id="formerr" role="alert" hidden></div>'
+    +'<fieldset><legend>Pages this role can open</legend><div class="permlist">'+boxes(access)+'</div></fieldset>'
+    +'<fieldset><legend>Extra permissions</legend><div class="permlist">'+boxes(extra)+'</div></fieldset></div><div class="error" id="formerr" role="alert" hidden></div>'
     +'<div class="actions"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Save role</button></div></form></div>';
 }
 function roleConfirmHTML(r){
@@ -1954,6 +2210,7 @@ function renderDialog(){
   const d=$("#dlg"), s=state.dlg; if(!s) return;
   if(s.mode==="form"){ d.innerHTML=formHTML(s.id?findCow(s.id):null); return; }
   if(s.mode==="cereal-form"){ d.innerHTML=cerealFormHTML(s.id?findCereal(s.id):null); return; }
+  if(s.mode==="shop-product-card"){ d.innerHTML=shopProductCardHTML(s.id?findCereal(s.id):null); return; }
   if(s.mode==="stock-add"){ d.innerHTML=stockAddHTML(s.kind,s.id); return; }
   if(s.mode==="milk-edit"){ d.innerHTML=milkEditHTML(); return; }
   if(s.mode==="role-form"){ d.innerHTML=roleFormHTML(s.id?state.roles.find(r=>r.id===s.id):null); return; }
@@ -2053,7 +2310,7 @@ function cerealFormHTML(c){
     +'<div class="field"><label for="c-buying">Buying price per unit <span class="hint">(KES)</span></label><input type="number" id="c-buying" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.buyingPrice||0)+'"></div>'
     +'<div class="field"><label for="c-price">Selling price per unit <span class="hint">(KES)</span></label><input type="number" id="c-price" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.price)+'"></div>'
     +'<div class="field"><label for="c-qty">Quantity remaining</label><input type="number" id="c-qty" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.qty)+'"></div>'
-    +'</div><p class="sub" style="margin-top:12px">Enter the amount you have now. Sales lower it automatically, so change it only to restock or correct a count. A new price applies to future sales only.</p>'
+    +'</div><p class="sub" style="margin-top:12px">Enter the amount you have now. Sales lower it automatically, so change it only to restock or correct a count. Admins set the selling price here; a new price applies to future sales only.</p>'
     +'<div class="error" id="formerr" role="alert" hidden></div>'
     +'<div class="actions">'+(c?'<button type="button" class="btn danger" data-act="ask-delete-cereal">Delete product</button>':"")
     +'<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="cerealsave">Save product</button></div></form></div>';
@@ -2295,7 +2552,7 @@ document.addEventListener("click",e=>{
   const sec=e.target.closest("[data-section]");
   if(sec){
     state.section=sec.dataset.section;
-    const tabs=SECTION_TABS[state.section]; if(tabs) state.tab=tabs[0][0];
+    const tabs=tabsFor(state.section); if(tabs) state.tab=tabs[0][0];
     if(state.section==="members") state.members.loaded=false;
     renderAll(); return;
   }
@@ -2359,6 +2616,8 @@ document.addEventListener("click",e=>{
     case "milk-price": openMilkEdit(); break;
     case "stock-add": openStockAdd(a.dataset.kind,a.dataset.id); break;
     case "stock-edit": if(a.dataset.kind==="milk") openMilkEdit(); else openCerealForm(a.dataset.id); break;
+    case "shop-product-card": state.dlg={mode:"shop-product-card",id:a.dataset.id}; renderDialog(); openDlg(); break;
+    case "shop-card-edit": openCerealForm(a.dataset.id); break;
     case "role-create": openRoleForm(null); break;
     case "role-edit": openRoleForm(a.dataset.id); break;
     case "role-ask-delete": state.dlg={mode:"role-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
@@ -2431,6 +2690,7 @@ document.addEventListener("click",e=>{
     case "casual-edit": editCasualWorker(a.dataset.id); break;
     case "casual-delete": deleteCasualWorker(a.dataset.id); break;
     case "save-land": saveLand(); break;
+    case "save-farm-identity": saveFarmIdentity(); break;
     case "prev-month": state.month=shiftMonth(state.month,-1); renderSummary(); break;
     case "next-month": state.month=shiftMonth(state.month,1); renderSummary(); break;
   }
@@ -2600,6 +2860,7 @@ document.addEventListener("submit",e=>{
   else if(id==="passwordform"){ e.preventDefault(); changePassword(); }
   else if(id==="loginform"){ e.preventDefault(); doLogin(); }
   else if(id==="forgotform"){ e.preventDefault(); doForgot(); }
+  else if(id==="signupform"){ e.preventDefault(); doSignUp(); }
   else if(id==="recoveryform"){ e.preventDefault(); doRecovery(); }
 });
 $("#dlg").addEventListener("click",e=>{ if(e.target===$("#dlg")) closeDlg(); });
