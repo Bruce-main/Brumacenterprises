@@ -295,6 +295,116 @@ dialog[open]{animation:dlgIn .22s cubic-bezier(.2,.8,.3,1)}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
 }
+
+/* ---------- Farm costs: expandable list + cards ---------- */
+.acc{display:grid;gap:12px}
+.acc-item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);overflow:hidden;transition:border-color .15s ease}
+.acc-item.open{border-color:var(--edge)}
+.acc-head{width:100%;display:flex;align-items:center;gap:14px;padding:16px 18px;background:transparent;border:0;cursor:pointer;text-align:left;transition:background-color .12s ease}
+.acc-head:hover{background:var(--surface-2)}
+.acc-head:focus-visible{outline-offset:-3px}
+.acc-ico{width:44px;height:44px;border-radius:13px;background:var(--green-tint);color:var(--green);display:grid;place-items:center;flex:none}
+.acc-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.acc-title{font:400 18px/1.25 var(--serif)}
+.acc-sum{font-size:14px;color:var(--ink-soft);overflow-wrap:anywhere}
+.acc-chev{flex:none;color:var(--ink-soft);transition:transform .25s ease}
+.acc-item.open .acc-chev{transform:rotate(180deg)}
+.acc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease}
+.acc-item.open .acc-body{grid-template-rows:1fr}
+.acc-inner{overflow:hidden;min-height:0;visibility:hidden;transition:visibility 0s linear .28s}
+.acc-item.open .acc-inner{visibility:visible;transition-delay:0s}
+.acc-pad{padding:6px 18px 20px;border-top:1px solid var(--line)}
+.subhead{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:16px 0 10px}
+.subhead h4{margin:0;font:600 13px/1.3 var(--sans);text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+.cardgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.fcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-sm);transition:box-shadow .15s ease,transform .15s ease}
+.fcard:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.fcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.fcard .amt{font:400 20px/1.15 var(--serif);font-variant-numeric:tabular-nums;white-space:nowrap}
+.fcard .fdesc{font-size:14px;color:var(--ink-soft);overflow-wrap:anywhere}
+.fcard-acts{display:flex;gap:6px;margin-top:auto;padding-top:10px;border-top:1px solid var(--line)}
+.fcard.hl{background:var(--green-tint);border-color:transparent}
+.fcard.hl .amt{color:var(--green-deep)}
+.catpill{background:var(--amber-tint);color:var(--amber)}
+.cardgrid.tiles{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.cardgrid.tiles .fcard:hover{transform:none;box-shadow:var(--shadow-sm)}
+.emptycard{padding:22px 16px;text-align:center;color:var(--ink-soft);border:1px dashed var(--edge);border-radius:var(--r-md);background:var(--surface-2)}
+.idcard{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;display:grid;gap:12px}
+.idrow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:480px){.idrow{grid-template-columns:1fr}}
+.idnotes{border-top:1px solid var(--line);padding-top:10px;overflow-wrap:anywhere;white-space:pre-wrap}
+
+/* ---------- Receipt picker, viewer ---------- */
+.rc-label{font-size:14px;font-weight:600;margin-bottom:6px}
+.rc-label .hint{font-weight:400;color:var(--ink-soft)}
+.dz{border:1.5px dashed var(--edge);border-radius:var(--r-lg);padding:16px;background:var(--surface-2);display:flex;flex-direction:column;gap:14px;transition:border-color .15s ease,background-color .15s ease}
+.dz:hover,.dz.drag{border-color:var(--green);background:var(--green-tint)}
+.dz.has-file{border-style:solid;border-color:var(--green);background:var(--surface)}
+.dz-empty{display:flex;align-items:center;gap:14px}
+.dz-ico{width:48px;height:48px;border-radius:14px;background:var(--green-tint);color:var(--green);display:grid;place-items:center;flex:none}
+.dz.drag .dz-ico,.dz:hover .dz-ico{background:var(--surface)}
+.dz-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dz-text span{font-size:14px;color:var(--ink-soft)}
+.dz-actions{display:flex;gap:8px;flex-wrap:wrap}
+.dz-preview{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.dz-thumb{width:68px;height:68px;border-radius:12px;object-fit:cover;border:1px solid var(--line);background:var(--surface-2);flex:none}
+.dz-info{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.dz-info b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dz-info span{font-size:13px;color:var(--ink-soft)}
+.dz-info .dz-ok{color:var(--green);font-weight:600}
+.dz-btns{display:flex;gap:6px}
+.rcpt-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--green-tint);color:var(--green-deep);font-weight:600;font-size:13px;cursor:pointer;transition:background-color .12s ease,transform .12s ease}
+.rcpt-btn:hover{transform:translateY(-1px);border-color:var(--green)}
+.rcpt-btn svg{width:15px;height:15px}
+.rcpt{padding:0}
+.rcpt-top{display:flex;align-items:center;gap:14px;padding:22px 22px 14px}
+.rcpt-badge{width:48px;height:48px;border-radius:14px;background:var(--green);color:var(--on-green);display:grid;place-items:center;flex:none}
+.rcpt-title{font:400 22px/1.15 var(--serif)}
+.rcpt-sub{font-size:14px;color:var(--ink-soft)}
+.rcpt-rows{margin:0 22px 16px;border:1px dashed var(--edge);border-radius:var(--r-md);padding:4px 14px;background:var(--surface-2)}
+.rcpt-rows div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.rcpt-rows div:first-child{border-top:0}
+.rcpt-rows span{color:var(--ink-soft)}
+.rcpt-rows .tot{font-size:17px}
+.rcpt-img{display:block;margin:0 22px 6px;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);background:var(--surface-2);max-height:56vh;overflow-y:auto}
+.rcpt-img img{display:block;width:100%;height:auto}
+.rcpt-state{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px 20px;color:var(--ink-soft)}
+.spin{width:20px;height:20px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--green);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rcpt-actions{padding:12px 22px 22px;margin-top:0}
+
+/* ---------- Profit margins ---------- */
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:680px){.mgrid{grid-template-columns:1fr}}
+.mcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow-md);display:flex;flex-direction:column;gap:4px}
+.mlbl{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+.mval{font:400 28px/1.15 var(--serif);font-variant-numeric:tabular-nums;color:var(--green-deep)}
+.mval.neg,.negtxt{color:var(--red)}
+.mpct{font-weight:700;font-size:15px}
+.meqn{font-size:13px;color:var(--ink-soft);margin-top:4px}
+.mcard.grand{background:linear-gradient(135deg,var(--green),var(--green-deep));border-color:transparent;color:var(--on-green)}
+.mcard.grand .mlbl,.mcard.grand .meqn{color:inherit;opacity:.9}
+.mcard.grand .mval{color:inherit}
+.mcard.grand .mval.neg{color:#FFD9D3}
+
+.dz-info{flex:1 1 120px}
+@media (max-width:520px){.dz-btns{flex-basis:100%;justify-content:flex-end;border-top:1px solid var(--line);padding-top:8px}}
+.sale{flex-wrap:wrap}
+.saleamt{flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
+a.btn{text-decoration:none}
+
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.chipbtn{border:1px solid var(--line);background:var(--surface-2);color:var(--ink-soft);padding:6px 14px;min-height:36px;border-radius:999px;font-weight:600;font-size:14px;cursor:pointer;transition:background-color .12s ease,color .12s ease,border-color .12s ease}
+.chipbtn:hover{color:var(--ink);border-color:var(--edge)}
+.chipbtn.on{background:var(--green);border-color:var(--green);color:var(--on-green)}
+
+/* Milk log and feed inputs: plain text until you press Edit */
+#view-log input[data-cow]:disabled,#view-log input[data-cow]:disabled:hover,
+#view-feed input[data-cow]:disabled,#view-feed input[data-cow]:disabled:hover{border-color:transparent;background:transparent;box-shadow:none;opacity:1;color:var(--ink);-webkit-text-fill-color:var(--ink);cursor:default}
+#view-log input[data-cow]:disabled::placeholder,#view-feed input[data-cow]:disabled::placeholder{color:var(--ink-soft);-webkit-text-fill-color:var(--ink-soft);opacity:.6}
+#view-feed input[type=text]:disabled::placeholder{color:transparent;-webkit-text-fill-color:transparent}
+#view-feed input[data-cow]:disabled{padding-left:0}
+#view-log input[data-cow]:not(:disabled),#view-feed input[data-cow]:not(:disabled){border-color:var(--green);background:var(--surface)}
 </style>
 </head>
 <body>
@@ -387,11 +497,11 @@ const state = {
   settings:{milkPrice:70,milkStock:0,farmName:"",location:"",farmNotes:""},
   salesDate:todayStr(), sale:{product:"milk",qty:"",time:"",query:"",open:false,hi:0}, editingAllocationId:null, costPeriod:"daily", costDate:todayStr(), costReport:null,
   feed:{}, feedDraft:{}, careDate:todayStr(),
-  staff:[], land:{costPerAcre:0,acresHired:0}, costs:[], casual:{}, casualWorkers:[], casualDate:todayStr(), casualDraft:{},
+  staff:[], land:{costPerAcre:0,acresHired:0}, lands:[], costLand:"all", costs:[], casual:{}, casualWorkers:[], casualDate:todayStr(), casualDraft:{},
   members:{list:[],loaded:false,loading:false,error:""},
   section:"farm", tab:"log", date:todayStr(), month:todayStr().slice(0,7),
   shopQuery:"", herdQuery:"",
-  feedEditing:{}, milkEditing:{},
+  feedEditing:{}, milkEditing:{}, farmOpen:{}, receiptFile:null,
   draft:{}, saving:false, dlg:null
 };
 
@@ -491,7 +601,9 @@ function cowToRow(f){
     weight_kg:f.weight!==""?parseFloat(f.weight):null,health:f.health||null,notes:f.notes||null};
 }
 function cerealFromRow(r){ return {id:r.id,name:r.name,unit:r.unit||"kg",buyingPrice:Number(r.buying_price||0),price:Number(r.price_per_kg),qty:Number(r.qty_kg)}; }
-function saleFromRow(r){ return {id:r.id,kind:r.product_kind,cerealId:r.cereal_id,qty:Number(r.quantity),p:Number(r.price_per_unit),d:r.sold_on,ts:Date.parse(r.sold_at)||0,receipt:r.receipt_path||""}; }
+function saleFromRow(r){ return {id:r.id,kind:r.product_kind,cerealId:r.cereal_id,qty:Number(r.quantity),p:Number(r.price_per_unit),d:r.sold_on,ts:Date.parse(r.sold_at)||0,receipt:r.receipt_path||"",bp:(r.buying_price==null?null:Number(r.buying_price))}; }
+// Cost of what was sold: buying price at the time of sale (falls back to today's buying price for older sales)
+function saleCost(x){ const bp=(x.bp!=null)?x.bp:((findCereal(x.cerealId)||{}).buyingPrice||0); return x.qty*bp; }
 function fmtClock(ts){ const d=new Date(ts); return pad(d.getHours())+":"+pad(d.getMinutes()); }
 
 /* ---------- Milk and cereal lookups ---------- */
@@ -616,7 +728,11 @@ async function loadProfile(){
   state.admin=!!(p&&p.role==="admin");
 }
 function staffFromRow(r){ return {id:r.id,name:r.name,wage:Number(r.wage_amount),period:r.wage_period,active:r.active}; }
-function costFromRow(r){ return {id:r.id,category:r.category,description:r.description||"",amount:Number(r.amount),date:r.cost_date}; }
+function costFromRow(r){ return {id:r.id,category:r.category,description:r.description||"",amount:Number(r.amount),date:r.cost_date,landId:r.land_id||""}; }
+function landFromRow(r){ return {id:r.id,name:r.name,location:r.location||"",acres:Number(r.acres||0),costPerAcre:Number(r.cost_per_acre||0),notes:r.notes||""}; }
+function findLand(id){ return state.lands.find(l=>l.id===id); }
+function landHire(l){ return l.acres*l.costPerAcre; }
+function totalLandHire(){ return state.lands.reduce((a,l)=>a+landHire(l),0); }
 
 async function loadCore(){
   async function one(q){
@@ -630,13 +746,14 @@ async function loadCore(){
       throw e;
     }
   }
-  const [cows, cereals, settings, roles, staff, land] = await Promise.all([
+  const [cows, cereals, settings, roles, staff, land, lands] = await Promise.all([
     one(run(sb.from("cows").select("*").order("tag"))),
     one(run(sb.from("cereals").select("*").order("name"))),
     one(run(sb.from("farm_settings").select("*").eq("id",1).maybeSingle())),
     one(loadRoles()),
     one(run(sb.from("staff").select("*").order("name"))),
-    one(run(sb.from("land_settings").select("*").eq("id",1).maybeSingle()))
+    one(run(sb.from("land_settings").select("*").eq("id",1).maybeSingle())),
+    one(run(sb.from("farm_lands").select("*").order("name")))
   ]);
   const required=[["Herd",cows],["Shop products",cereals],["Farm settings",settings]].filter(x=>!x[1].ok);
   if(required.length){
@@ -658,13 +775,14 @@ async function loadCore(){
   if(staff.ok) state.staff=staff.data.map(staffFromRow); else { state.staff=[]; skipped.push("staff"); }
   if(land.ok){ if(land.data) state.land={costPerAcre:Number(land.data.cost_per_acre),acresHired:Number(land.data.acres_hired)}; }
   else skipped.push("land");
+  if(lands.ok) state.lands=lands.data.map(landFromRow); else { state.lands=[]; skipped.push("farm lands"); }
   await loadProfile();
   try{
     const stock=await run(sb.rpc("refresh_milk_stock"));
     if(typeof stock==="number") state.settings.milkStock=stock;
   }catch(e){ /* older database without the RPC: keep the value read above */ }
   if(!skipped.length) return "";
-  const sample=(!roles.ok&&roles.error)||(!staff.ok&&staff.error)||(!land.ok&&land.error);
+  const sample=(!roles.ok&&roles.error)||(!staff.ok&&staff.error)||(!land.ok&&land.error)||(!lands.ok&&lands.error);
   return "Some records could not be loaded ("+skipped.join(", ")+"). "+friendly(sample);
 }
 async function loadMonth(m){
@@ -950,7 +1068,7 @@ function resetToLogin(){
   state.cows=[]; state.cereals=[]; state.roles=[]; state.milk={}; state.milkPrices={}; state.sales=[]; state.loadedMonths=new Set();
   state.settings={milkPrice:70,milkStock:0}; state.salesDate=todayStr(); state.sale={product:"milk",qty:"",time:"",query:"",open:false,hi:0};
   state.feed={}; state.feedDraft={}; state.careDate=todayStr();
-  state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.costs=[]; state.casual={}; state.casualWorkers=[]; state.casualDate=todayStr(); state.casualDraft={};
+  state.staff=[]; state.land={costPerAcre:0,acresHired:0}; state.lands=[]; state.costLand="all"; state.costs=[]; state.casual={}; state.casualWorkers=[]; state.casualDate=todayStr(); state.casualDraft={};
   state.members={list:[],loaded:false,loading:false,error:""};
   state.shopQuery=""; state.herdQuery=""; state.feedEditing={}; state.milkEditing={};
   state.draft={}; state.section="farm"; state.tab="log"; state.auth="out"; state.authTab="login";
@@ -1276,6 +1394,8 @@ async function saveFeed(){
 /* ----- Balances ----- */
 const UNIT_WORD={kg:"kg",litre:"litre",piece:"piece",bag:"bag",bunch:"bunch",packet:"packet",L:"litre"};
 function unitWord(u){ return UNIT_WORD[u]||u; }
+// Stock value = buying price x quantity in stock
+function stockCost(r){ return Math.max(0,r.qty)*(r.buyingPrice||0); }
 function allStockRows(){
   const rows=[{kind:"milk",id:null,name:"Milk",unit:"L",price:milkPrice(),qty:state.settings.milkStock}];
   sortedCereals().forEach(c=>rows.push({kind:"cereal",id:c.id,name:c.name,unit:c.unit,price:c.price,buyingPrice:c.buyingPrice||0,qty:c.qty}));
@@ -1314,7 +1434,8 @@ function shopProductCardHTML(c){
     +'<div class="product-detail"><span>Unit</span><strong>'+esc(uw)+'</strong></div>'
     +'<div class="product-detail"><span>Available stock</span><strong>'+fmtL(Math.max(0,c.qty))+' '+esc(c.unit)+'</strong></div>'
     +'<div class="product-detail"><span>Buying price</span><strong>'+(c.buyingPrice>0?esc(fmtKES(c.buyingPrice)):'Not set')+' / '+esc(uw)+'</strong></div>'
-    +(admin?'<div class="product-detail"><span>Selling price</span><strong>'+esc(fmtKES(c.price))+' / '+esc(uw)+'</strong></div>':'')
+    +(admin?'<div class="product-detail"><span>Selling price</span><strong>'+esc(fmtKES(c.price))+' / '+esc(uw)+'</strong></div>'
+      +'<div class="product-detail"><span>Stock value (at cost)</span><strong>'+esc(fmtKES(stockCost(c)))+'</strong></div>':'')
     +'</div>'+(admin?'<p class="sub">Profit per unit: '+esc(fmtKES(c.price-(c.buyingPrice||0)))+'</p>':'')
     +'<div class="actions">'+(admin?'<button class="btn" data-act="shop-card-edit" data-id="'+esc(c.id)+'">Edit product</button>':'')
     +'<button class="btn ghost" data-act="close">Close</button></div></div>';
@@ -1329,7 +1450,7 @@ function productCardHTML(r, ms){
     +'<div class="product-detail"><span>In stock</span><strong>'+fmtL(Math.max(0,r.qty))+' '+esc(r.unit)+'</strong></div>'
     +'<div class="product-detail"><span>Selling price</span><strong>'+esc(fmtKES(r.price))+'</strong></div>'
     +(admin?'<div class="product-detail"><span>Buying price</span><strong>'+(r.buyingPrice>0?esc(fmtKES(r.buyingPrice)):'Not set')+'</strong></div>'
-      +'<div class="product-detail"><span>Stock value</span><strong>'+esc(fmtKES(Math.max(0,r.qty)*r.price))+'</strong></div>':'')
+      +'<div class="product-detail"><span>Stock value (at cost)</span><strong>'+esc(fmtKES(stockCost(r)))+'</strong></div>':'')
     +'</div>'
     +(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button>'
       +(admin?'<button class="btn small" data-act="edit-cereal" data-id="'+esc(r.id)+'">Edit</button>':'')+'</div>':'')
@@ -1338,7 +1459,7 @@ function productCardHTML(r, ms){
 function renderShopList(){
   const list=$("#bal-list"); if(!list) return;
   const inShop=state.section==="shop", ms=can("manage_stock"), rows=filteredShopRows();
-  let total=0; rows.forEach(r=>{ total+=Math.max(0,r.qty)*r.price; });
+  let total=0; rows.forEach(r=>{ total+=stockCost(r); });
   if(!stockRows().length){
     list.innerHTML='<div class="ledger"><div class="empty"><p>No products have been added yet.</p>'+(ms&&inShop?'<button class="btn" data-act="add-cereal">Add product</button>':"")+'</div></div>';
     return;
@@ -1348,15 +1469,12 @@ function renderShopList(){
     return;
   }
   if(inShop){
-    let html=(state.admin)?'<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>':"";
+    let html=(state.admin)?'<p class="sumline">Total stock value: <b>'+fmtKES(total)+'</b> <span class="meta">(buying price × quantity in stock)</span></p>':"";
     html+='<div class="product-grid">'+rows.map(r=>productCardHTML(r, ms)).join("")+'</div>';
     list.innerHTML=html;
     return;
   }
-  let html=(state.admin&&inShop)?'<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>':"";
-  if(state.admin&&!inShop){
-    html='<p class="sumline">Stock on hand is worth <b>'+fmtKES(total)+'</b>.</p>';
-  }
+  let html="";
   html+='<div class="ledger">'+rows.map(r=>{
     const out=r.qty<=0, attr='data-kind="'+r.kind+'" data-id="'+esc(r.id||"")+'"', uw=unitWord(r.unit);
     const priceLine=r.kind==="milk"
@@ -1364,7 +1482,7 @@ function renderShopList(){
       : (state.admin
           ? 'Buying price: '+(r.buyingPrice>0?esc(fmtKES(r.buyingPrice)):'<span class="meta">Not set</span>')+' / '+uw+' <span class="meta">·</span> Selling price: '+esc(fmtKES(r.price))+' / '+uw
           : 'Buying price: '+(r.buyingPrice>0?esc(fmtKES(r.buyingPrice)):'<span class="meta">Not set</span>')+' / '+uw)
-        +(state.admin&&!out?" · Stock value: "+esc(fmtKES(r.qty*r.price)):"");
+        +(state.admin&&!out?" · Stock value: "+esc(fmtKES(stockCost(r))):"");
     return '<div class="row shop-product-row" data-act="shop-product-card" data-id="'+esc(r.id||"")+'" role="button" tabindex="0" title="View product details"><div class="chip" aria-hidden="true">'+initial(r.name)+'</div>'
       +'<div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+priceLine+'</div>'
       +(r.kind==="milk"?(state.admin?'<div class="pactions"><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit price</button></div>':""):(ms?'<div class="pactions"><button class="btn ghost small" data-act="stock-add" '+attr+'>Add stock</button><button class="btn ghost small" data-act="stock-edit" '+attr+'>Edit</button></div>':""))+'</div>'
@@ -1440,8 +1558,9 @@ async function saveMilkEdit(){
 /* ----- Farm costs: staff, casual labour, land and inputs ----- */
 function staffRowHTML(s){
   const fin=can("manage_finance");
-  return '<div class="rolerow"><div><div class="nm">'+esc(s.name)+'</div><div class="meta">'+esc(fmtKES(s.wage)+" a "+s.period)+'</div></div>'
-    +(fin?'<div class="pactions" style="margin:0"><button class="btn ghost small" data-act="staff-edit" data-id="'+esc(s.id)+'">Edit</button><button class="btn danger small" data-act="staff-ask-delete" data-id="'+esc(s.id)+'">Remove</button></div>':"")+'</div>';
+  return '<article class="fcard"><div class="fcard-top"><div><div class="nm">'+esc(s.name)+'</div><div class="meta">Paid '+esc(s.period)+'</div></div>'
+    +'<div class="amt">'+esc(fmtKES(s.wage))+'</div></div>'
+    +(fin?'<div class="fcard-acts"><button class="btn ghost small" data-act="staff-edit" data-id="'+esc(s.id)+'">Edit</button><button class="btn danger small" data-act="staff-ask-delete" data-id="'+esc(s.id)+'">Remove</button></div>':"")+'</article>';
 }
 function staffFormHTML(s){
   return '<div class="dlg"><h2 style="margin-bottom:14px">'+(s?"Edit staff member":"Add permanent staff")+'</h2><form id="staffform" novalidate><div class="stack">'
@@ -1485,32 +1604,59 @@ function casualDraftVal(field){
   if(k in state.casualDraft) return state.casualDraft[k];
   const v=casualNow()[field]; return v?String(v):"";
 }
-function costFormHTML(){
-  return '<div class="dlg"><h2 style="margin-bottom:14px">Add farm expenditure</h2><form id="costform" novalidate><div class="stack">'
-    +'<div class="field"><label for="co-cat">Category</label><select id="co-cat">'+COST_CATS.map(c=>'<option value="'+c[0]+'">'+c[1]+'</option>').join("")+'</select></div>'
-    +'<div class="field"><label for="co-desc">Description <span class="hint">(optional)</span></label><input type="text" id="co-desc" maxlength="200"></div>'
-    +'<div class="grid2"><div class="field"><label for="co-amount">Amount <span class="hint">(KES)</span></label><input type="number" id="co-amount" inputmode="decimal" min="0" step="any"></div>'
-    +'<div class="field"><label for="co-date">Date</label><input type="date" id="co-date" max="'+todayStr()+'" value="'+todayStr()+'"></div></div></div>'
+function findCost(id){ return state.costs.find(c=>c.id===id); }
+function findCasualWorker(id){ return state.casualWorkers.find(w=>w.id===id); }
+
+/* ----- Expenditure form, confirm and save (add + edit) ----- */
+function costFormHTML(c){
+  return '<div class="dlg"><h2 style="margin-bottom:14px">'+(c?"Edit expenditure":"Add farm expenditure")+'</h2><form id="costform" novalidate><div class="stack">'
+    +'<div class="field"><label for="co-land">Farm land</label><select id="co-land"><option value="">Not tied to a land</option>'+state.lands.map(l=>'<option value="'+esc(l.id)+'"'+((c?c.landId:(state.dlg&&state.dlg.land)||"")===l.id?" selected":"")+'>'+esc(l.name)+'</option>').join("")+'</select>'
+    +(state.lands.length?'':'<p class="sub" style="margin:6px 0 0">Add your lands in the Farm lands section to record costs against each one.</p>')+'</div>'
+    +'<div class="field"><label for="co-cat">Category</label><select id="co-cat">'+COST_CATS.map(x=>'<option value="'+x[0]+'"'+(c&&c.category===x[0]?" selected":"")+'>'+x[1]+'</option>').join("")+'</select></div>'
+    +'<div class="field"><label for="co-desc">Description <span class="hint">(optional)</span></label><input type="text" id="co-desc" maxlength="200" value="'+esc(c&&c.description)+'"></div>'
+    +'<div class="grid2"><div class="field"><label for="co-amount">Amount <span class="hint">(KES)</span></label><input type="number" id="co-amount" inputmode="decimal" min="0" step="any" value="'+esc(c&&c.amount)+'"></div>'
+    +'<div class="field"><label for="co-date">Date</label><input type="date" id="co-date" max="'+todayStr()+'" value="'+esc(c?c.date:todayStr())+'"></div></div></div>'
     +'<div class="error" id="formerr" role="alert" hidden></div>'
-    +'<div class="actions"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Add cost</button></div></form></div>';
+    +'<div class="actions">'+(c?'<button type="button" class="btn danger" data-act="cost-ask-delete" data-id="'+esc(c.id)+'">Remove</button>':"")
+    +'<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">'+(c?"Save changes":"Add cost")+'</button></div></form></div>';
+}
+function costConfirmHTML(c){
+  return '<div class="dlg"><h2>Remove this expenditure?</h2><p>'+esc(label(COST_CATS,c.category))+' · '+esc(fmtKES(c.amount))+' on '+esc(fmtDate(c.date))+'. This can\'t be undone.</p>'
+    +'<div class="error" id="delerr" role="alert" hidden></div>'
+    +'<div class="actions"><button class="btn ghost" data-act="close">Keep</button><button class="btn danger" id="delbtn" data-act="cost-delete">Remove</button></div></div>';
 }
 async function saveCost(){
   const g=id=>document.getElementById(id).value.trim();
   const cat=g("co-cat"), desc=g("co-desc"), amount=parseFloat(g("co-amount")), date=g("co-date");
+  const editing=state.dlg&&state.dlg.id?findCost(state.dlg.id):null;
   if(!(amount>0)) return showErr("formerr","Enter an amount above 0.");
   if(!date||date>todayStr()) return showErr("formerr","Enter a valid date, not in the future.");
   document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
+  const row={category:cat,description:desc||null,amount:round2(amount),cost_date:date,land_id:g("co-land")||null};
   try{
-    await run(sb.from("farm_costs").insert({category:cat,description:desc||null,amount:round2(amount),cost_date:date}));
-    await loadMonth(monthOf(date)); closeDlg(); toast("Expenditure recorded"); scheduleRender();
-  }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,"Add cost"); }
+    if(editing){
+      needRows(await run(sb.from("farm_costs").update(row).eq("id",editing.id).select("id")));
+      await loadMonth(monthOf(editing.date));
+      if(monthOf(date)!==monthOf(editing.date)) await loadMonth(monthOf(date));
+    } else {
+      await run(sb.from("farm_costs").insert(row));
+      await loadMonth(monthOf(date));
+    }
+    closeDlg(); toast(editing?"Expenditure updated":"Expenditure recorded"); scheduleRender();
+  }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,editing?"Save changes":"Add cost"); }
 }
-async function deleteCost(id){
-  try{ needRows(await run(sb.from("farm_costs").delete().eq("id",id).select("id"))); await Promise.all(Array.from(state.loadedMonths).map(loadMonth)); toast("Expenditure removed"); }
-  catch(e){ toast("Couldn't remove the cost. "+friendly(e),true); }
-  scheduleRender();
+async function deleteCost(){
+  const id=state.dlg&&state.dlg.id, btn=document.getElementById("delbtn"), errEl=document.getElementById("delerr");
+  if(!id) return;
+  btn.disabled=true; btn.textContent="Removing…"; errEl.hidden=true;
+  try{
+    needRows(await run(sb.from("farm_costs").delete().eq("id",id).select("id")));
+    await Promise.all(Array.from(state.loadedMonths).map(loadMonth));
+    closeDlg(); toast("Expenditure removed"); scheduleRender();
+  }catch(e){ errEl.textContent="Couldn't remove the cost. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Remove"; }
 }
 
+/* ----- Casual workers ----- */
 async function saveCasualWorker(e){
   e.preventDefault();
   const name=$("#cw-name").value.trim(), task=$("#cw-task").value.trim(), wage=Number($("#cw-wage").value), err=$("#cw-err");
@@ -1522,20 +1668,39 @@ async function saveCasualWorker(e){
     await loadMonth(monthOf(state.casualDate));renderFarm();toast("Casual worker added");
   }catch(ex){err.textContent="Couldn't save worker. "+friendly(ex);err.hidden=false;}
 }
-async function editCasualWorker(id){
-  const w=state.casualWorkers.find(x=>x.id===id); if(!w)return;
-  const name=prompt("Casual worker name:",w.worker_name); if(name===null)return;
-  const task=prompt("Task description:",w.task_description); if(task===null)return;
-  const wageRaw=prompt("Daily wage (KES):",String(w.daily_wage)); if(wageRaw===null)return;
-  const wage=Number(wageRaw);
-  if(name.trim().length<2||task.trim().length<2||!(wage>=0)){toast("Please enter a valid name, task and wage.",true);return;}
-  try{await run(sb.from("casual_workers").update({worker_name:name.trim(),task_description:task.trim(),daily_wage:round2(wage),updated_at:new Date().toISOString()}).eq("id",id));await loadMonth(monthOf(state.casualDate));renderFarm();toast("Casual worker updated");}
-  catch(ex){toast("Couldn't update worker. "+friendly(ex),true);}
+function casualFormHTML(w){
+  return '<div class="dlg"><h2 style="margin-bottom:14px">Edit casual worker</h2><form id="casualeditform" novalidate><div class="stack">'
+    +'<div class="grid2"><div class="field"><label for="ce-name">Name</label><input type="text" id="ce-name" maxlength="80" value="'+esc(w&&w.worker_name)+'"></div>'
+    +'<div class="field"><label for="ce-wage">Daily wage <span class="hint">(KES)</span></label><input type="number" id="ce-wage" inputmode="decimal" min="0" step="any" value="'+esc(w&&w.daily_wage)+'"></div></div>'
+    +'<div class="field"><label for="ce-task">Task description</label><textarea id="ce-task" maxlength="500">'+esc(w&&w.task_description)+'</textarea></div></div>'
+    +'<p class="sub" style="margin-top:10px">Worked on '+esc(w?fmtDate(w.work_date):"")+'.</p>'
+    +'<div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions"><button type="button" class="btn danger" data-act="casual-ask-delete" data-id="'+esc(w&&w.id)+'">Remove</button>'
+    +'<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Save changes</button></div></form></div>';
 }
-async function deleteCasualWorker(id){
-  if(!confirm("Remove this casual worker record?"))return;
-  try{await run(sb.from("casual_workers").delete().eq("id",id));await loadMonth(monthOf(state.casualDate));renderFarm();toast("Casual worker removed");}
-  catch(ex){toast("Couldn't remove worker. "+friendly(ex),true);}
+function casualConfirmHTML(w){
+  return '<div class="dlg"><h2>Remove '+esc(w.worker_name)+'?</h2><p>This removes the casual worker record for '+esc(fmtDate(w.work_date))+'. It can\'t be undone.</p>'
+    +'<div class="error" id="delerr" role="alert" hidden></div>'
+    +'<div class="actions"><button class="btn ghost" data-act="close">Keep</button><button class="btn danger" id="delbtn" data-act="casual-delete">Remove</button></div></div>';
+}
+async function saveCasualEdit(){
+  const w=state.dlg&&state.dlg.id?findCasualWorker(state.dlg.id):null; if(!w) return;
+  const name=document.getElementById("ce-name").value.trim(), task=document.getElementById("ce-task").value.trim(), wage=Number(document.getElementById("ce-wage").value);
+  if(name.length<2||task.length<2||!(wage>=0)) return showErr("formerr","Enter a name, task description and a valid wage.");
+  document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
+  try{
+    needRows(await run(sb.from("casual_workers").update({worker_name:name,task_description:task,daily_wage:round2(wage),updated_at:new Date().toISOString()}).eq("id",w.id).select("id")));
+    await loadMonth(monthOf(w.work_date)); closeDlg(); toast("Casual worker updated"); scheduleRender();
+  }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,"Save changes"); }
+}
+async function deleteCasualWorker(){
+  const w=state.dlg&&state.dlg.id?findCasualWorker(state.dlg.id):null, btn=document.getElementById("delbtn"), errEl=document.getElementById("delerr");
+  if(!w) return;
+  btn.disabled=true; btn.textContent="Removing…"; errEl.hidden=true;
+  try{
+    needRows(await run(sb.from("casual_workers").delete().eq("id",w.id).select("id")));
+    await loadMonth(monthOf(w.work_date)); closeDlg(); toast("Casual worker removed"); scheduleRender();
+  }catch(e){ errEl.textContent="Couldn't remove the worker. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Remove"; }
 }
 async function saveCasual(){
   const errEl=$("#casualerr"), count=parseInt(casualDraftVal("count"),10), wage=parseFloat(casualDraftVal("wage"));
@@ -1552,111 +1717,167 @@ async function saveCasual(){
 }
 function formBusyId(id,on,label){ const b=document.getElementById(id); if(b){ b.disabled=on; b.textContent=label; } }
 
-
+/* ----- Farm identity (lives inside Inputs & farm expenditures) ----- */
+function identityFormHTML(){
+  return '<div class="dlg"><h2 style="margin-bottom:6px">Farm identity</h2><p class="sub" style="margin-bottom:14px">Name, location and notes for this holding. Useful when you manage more than one farm.</p>'
+    +'<form id="identityform" novalidate><div class="grid2">'
+    +'<div class="field"><label for="farm-name">Farm name</label><input type="text" id="farm-name" maxlength="80" value="'+esc(state.settings.farmName||"")+'" placeholder="e.g. Brumac Main, North Paddock"></div>'
+    +'<div class="field"><label for="farm-location">Location / area</label><input type="text" id="farm-location" maxlength="120" value="'+esc(state.settings.location||"")+'" placeholder="Town, county or site"></div>'
+    +'<div class="field full"><label for="farm-notes">Notes <span class="hint">(size, crops, herds, etc.)</span></label><textarea id="farm-notes" maxlength="500" placeholder="Acres, main crops, herd size…">'+esc(state.settings.farmNotes||"")+'</textarea></div></div>'
+    +'<div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">Save farm details</button></div></form></div>';
+}
 async function saveFarmIdentity(){
-  if(!(state.admin || can("manage_finance"))) return toast("You can't change farm details.", true);
-  const name=($("#farm-name")&&$("#farm-name").value||"").trim();
-  const location=($("#farm-location")&&$("#farm-location").value||"").trim();
-  const notes=($("#farm-notes")&&$("#farm-notes").value||"").trim();
-  const err=$("#farmid-err");
-  if(name && (name.length<2 || name.length>80)){
-    if(err){ err.textContent="Farm name must be 2 to 80 characters, or leave it blank."; err.hidden=false; }
-    return;
-  }
-  if(location.length>120){ if(err){ err.textContent="Location is too long."; err.hidden=false; } return; }
-  if(notes.length>500){ if(err){ err.textContent="Notes are too long."; err.hidden=false; } return; }
-  if(err) err.hidden=true;
-  const btn=$("#savefarmid"); if(btn){ btn.disabled=true; btn.textContent="Saving…"; }
+  if(!(state.admin || can("manage_finance"))) return showErr("formerr","You can't change farm details.");
+  const name=$("#farm-name").value.trim(), location=$("#farm-location").value.trim(), notes=$("#farm-notes").value.trim();
+  if(name && (name.length<2 || name.length>80)) return showErr("formerr","Farm name must be 2 to 80 characters, or leave it blank.");
+  if(location.length>120) return showErr("formerr","Location is too long.");
+  if(notes.length>500) return showErr("formerr","Notes are too long.");
+  document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
   try{
-    await run(sb.rpc("set_farm_identity",{
-      p_name: name||null,
-      p_location: location||null,
-      p_notes: notes||null
-    }));
-    state.settings.farmName=name;
-    state.settings.location=location;
-    state.settings.farmNotes=notes;
-    toast("Farm details saved");
-    renderWho();
-    renderFarm();
-  }catch(e){
-    if(err){ err.textContent="Couldn't save. "+friendly(e); err.hidden=false; }
-    else toast("Couldn't save farm details. "+friendly(e), true);
-  }
-  if(btn){ btn.disabled=false; btn.textContent="Save farm details"; }
+    await run(sb.rpc("set_farm_identity",{p_name:name||null,p_location:location||null,p_notes:notes||null}));
+    state.settings.farmName=name; state.settings.location=location; state.settings.farmNotes=notes;
+    closeDlg(); toast("Farm details saved"); renderWho(); renderFarm();
+  }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,"Save farm details"); }
 }
 
+/* ----- Farm lands (several, each with its own hire cost and expenditures) ----- */
+function landFormHTML(l){
+  return '<div class="dlg"><h2 style="margin-bottom:14px">'+(l?"Edit land":"Add farm land")+'</h2><form id="landform" novalidate><div class="grid2">'
+    +'<div class="field"><label for="ld-name">Land name</label><input type="text" id="ld-name" maxlength="80" value="'+esc(l&&l.name)+'" placeholder="e.g. North paddock, Plot 2"></div>'
+    +'<div class="field"><label for="ld-loc">Location <span class="hint">(optional)</span></label><input type="text" id="ld-loc" maxlength="120" value="'+esc(l&&l.location)+'"></div>'
+    +'<div class="field"><label for="ld-acres">Acres</label><input type="number" id="ld-acres" inputmode="decimal" min="0" step="any" value="'+esc(l?l.acres:"")+'"></div>'
+    +'<div class="field"><label for="ld-cpa">Hire cost per acre <span class="hint">(KES, 0 if owned)</span></label><input type="number" id="ld-cpa" inputmode="decimal" min="0" step="any" value="'+esc(l?l.costPerAcre:0)+'"></div>'
+    +'<div class="field full"><label for="ld-notes">Notes <span class="hint">(optional)</span></label><textarea id="ld-notes" maxlength="500" placeholder="Crop, soil, access…">'+esc(l&&l.notes)+'</textarea></div></div>'
+    +'<div class="error" id="formerr" role="alert" hidden></div>'
+    +'<div class="actions">'+(l?'<button type="button" class="btn danger" data-act="land-ask-delete" data-id="'+esc(l.id)+'">Remove</button>':"")
+    +'<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn" id="formsave">'+(l?"Save changes":"Add land")+'</button></div></form></div>';
+}
+function landConfirmHTML(l){
+  return '<div class="dlg"><h2>Remove '+esc(l.name)+'?</h2><p>The land is removed from the list. Its expenditures are kept and show as “Not tied to a land”. This can\'t be undone.</p>'
+    +'<div class="error" id="delerr" role="alert" hidden></div>'
+    +'<div class="actions"><button class="btn ghost" data-act="close">Keep</button><button class="btn danger" id="delbtn" data-act="land-delete">Remove</button></div></div>';
+}
 async function saveLand(){
-  const cpa=parseFloat(document.getElementById("land-cpa").value), acres=parseFloat(document.getElementById("land-acres").value);
-  const errEl=$("#landerr");
-  if(!(cpa>=0)){ errEl.textContent="Enter the cost per acre, 0 or more."; errEl.hidden=false; return; }
-  if(!(acres>=0)){ errEl.textContent="Enter the acres hired, 0 or more."; errEl.hidden=false; return; }
-  errEl.hidden=true; formBusyId("saveland",true,"Saving…");
+  const g=id=>document.getElementById(id).value.trim();
+  const name=g("ld-name"), loc=g("ld-loc"), notes=g("ld-notes"), acres=parseFloat(g("ld-acres")), cpa=parseFloat(g("ld-cpa")||"0");
+  const editing=state.dlg&&state.dlg.id?findLand(state.dlg.id):null;
+  if(name.length<2||name.length>80) return showErr("formerr","Enter a name for this land (2 to 80 characters).");
+  if(!(acres>=0)) return showErr("formerr","Enter the acres, 0 or more.");
+  if(!(cpa>=0)) return showErr("formerr","Enter the hire cost per acre, 0 or more.");
+  document.getElementById("formerr").hidden=true; formBusy(true,"Saving…");
+  const row={name:name,location:loc||null,acres:round2(acres),cost_per_acre:round2(cpa),notes:notes||null};
   try{
-    await run(sb.from("land_settings").update({cost_per_acre:round2(cpa),acres_hired:round2(acres)}).eq("id",1));
-    state.land={costPerAcre:round2(cpa),acresHired:round2(acres)};
-    toast("Land details saved");
-  }catch(e){ toast("Couldn't save. "+friendly(e),true); }
-  formBusyId("saveland",false,"Save"); renderFarm();
+    if(editing) needRows(await run(sb.from("farm_lands").update(row).eq("id",editing.id).select("id")));
+    else await run(sb.from("farm_lands").insert(row));
+    await loadCore(); closeDlg(); toast(editing?"Land updated":"Land added"); scheduleRender();
+  }catch(e){ showErr("formerr","Couldn't save. "+friendly(e)); formBusy(false,editing?"Save changes":"Add land"); }
+}
+async function deleteLand(){
+  const id=state.dlg&&state.dlg.id, btn=document.getElementById("delbtn"), errEl=document.getElementById("delerr");
+  if(!id) return;
+  btn.disabled=true; btn.textContent="Removing…"; errEl.hidden=true;
+  try{
+    needRows(await run(sb.from("farm_lands").delete().eq("id",id).select("id")));
+    if(state.costLand===id) state.costLand="all";
+    await loadCore(); await Promise.all(Array.from(state.loadedMonths).map(loadMonth));
+    closeDlg(); toast("Land removed"); scheduleRender();
+  }catch(e){ errEl.textContent="Couldn't remove the land. "+friendly(e); errEl.hidden=false; btn.disabled=false; btn.textContent="Remove"; }
+}
+function landChipsHTML(){
+  if(!state.lands.length) return "";
+  let cur=state.costLand; if(cur!=="all"&&cur!=="none"&&!findLand(cur)) cur="all";
+  const opts=[["all","All lands"]].concat(state.lands.map(l=>[l.id,l.name])).concat([["none","Not tied to a land"]]);
+  return '<div class="chips" role="group" aria-label="Filter expenditures by land">'
+    +opts.map(o=>'<button type="button" class="chipbtn'+(cur===o[0]?" on":"")+'" data-act="cost-land-filter" data-id="'+esc(o[0])+'" aria-pressed="'+(cur===o[0])+'">'+esc(o[1])+'</button>').join("")+'</div>';
+}
+function landCardHTML(l,fin){
+  let spent=0, n=0; state.costs.forEach(c=>{ if(c.landId===l.id){ spent+=c.amount; n++; } });
+  return '<article class="fcard"><div class="fcard-top"><div><div class="nm">'+esc(l.name)+'</div><div class="meta">'+esc(l.location||"No location set")+'</div></div>'
+    +'<div class="amt">'+esc(fmtKES(landHire(l)))+'</div></div>'
+    +'<div class="fdesc">'+esc(fmtL(l.acres))+' acres × '+esc(fmtKES(l.costPerAcre))+' per acre (hire)</div>'
+    +'<div class="fdesc">Expenditures: <b>'+esc(fmtKES(spent))+'</b> in '+n+(n===1?" record":" records")+'</div>'
+    +(l.notes?'<div class="fdesc">'+esc(l.notes)+'</div>':'')
+    +(fin?'<div class="fcard-acts"><button class="btn ghost small" data-act="cost-add" data-land="'+esc(l.id)+'">Add cost</button><button class="btn ghost small" data-act="land-edit" data-id="'+esc(l.id)+'">Edit</button><button class="btn danger small" data-act="land-ask-delete" data-id="'+esc(l.id)+'">Remove</button></div>':'')+'</article>';
 }
 
+/* ----- Farm costs page: expandable list of sections, each with cards ----- */
+const ACC_ICONS={
+  inputs:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18v12H3z"/><path d="M3 7l3-4h12l3 4"/><circle cx="16" cy="13" r="1.6"/></svg>',
+  staff:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.5 3.5 0 010 6.8M18 14.4c2.2.6 3.5 2.4 3.5 5.6"/></svg>',
+  casual:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  land:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20l5.5-9 4 6 3-4.5L21 20z"/></svg>'
+};
+function accItemHTML(key,title,summary,body){
+  const open=!!state.farmOpen[key];
+  return '<div class="acc-item'+(open?" open":"")+'"><button type="button" class="acc-head" data-act="acc-toggle" data-key="'+key+'" aria-expanded="'+open+'">'
+    +'<span class="acc-ico">'+ACC_ICONS[key]+'</span><span class="acc-main"><span class="acc-title">'+esc(title)+'</span><span class="acc-sum">'+summary+'</span></span>'
+    +'<svg class="acc-chev" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>'
+    +'<div class="acc-body"><div class="acc-inner"><div class="acc-pad">'+body+'</div></div></div></div>';
+}
+function costCardHTML(c,fin){
+  return '<article class="fcard"><div class="fcard-top"><div><span class="pill catpill">'+esc(label(COST_CATS,c.category))+'</span><div class="meta" style="margin-top:6px">'+esc(fmtDate(c.date))+' · '+esc((findLand(c.landId)||{}).name||"No land")+'</div></div>'
+    +'<div class="amt">'+esc(fmtKES(c.amount))+'</div></div>'
+    +(c.description?'<div class="fdesc">'+esc(c.description)+'</div>':'')
+    +(fin?'<div class="fcard-acts"><button class="btn ghost small" data-act="cost-edit" data-id="'+esc(c.id)+'">Edit</button><button class="btn danger small" data-act="cost-ask-delete" data-id="'+esc(c.id)+'">Remove</button></div>':'')+'</article>';
+}
+function casualCardHTML(w,fin){
+  return '<article class="fcard"><div class="fcard-top"><div><div class="nm">'+esc(w.worker_name)+'</div><div class="meta">'+esc(fmtDate(w.work_date))+'</div></div>'
+    +'<div class="amt">'+esc(fmtKES(Number(w.daily_wage)))+'</div></div>'
+    +'<div class="fdesc">'+esc(w.task_description)+'</div>'
+    +(fin?'<div class="fcard-acts"><button class="btn ghost small" data-act="casual-edit" data-id="'+esc(w.id)+'">Edit</button><button class="btn danger small" data-act="casual-ask-delete" data-id="'+esc(w.id)+'">Remove</button></div>':'')+'</article>';
+}
 function renderFarm(){
   const el=$("#view-farm");
   if(!state.ready){ el.innerHTML=""; return; }
   if(!canSeeCosts()){ el.innerHTML=lockedHTML("farm"); return; }
   ensureMonth(monthOf(state.casualDate));
-  const fin=can("manage_finance");
-  let html='<h2>Farm costs</h2><p class="sub" style="margin:4px 0 20px">Staff, casual labour, land, inputs and every farm expenditure. '+(fin?"":"Admins and finance roles keep this up to date.")+'</p>';
+  const fin=can("manage_finance"), canId=fin||state.admin;
+  let html='<h2>Farm costs</h2><p class="sub" style="margin:4px 0 18px">Tap a section to open it. '+(fin?"":"Admins and finance roles keep this up to date.")+'</p><div class="acc">';
 
-  // Farm identity (name, location, notes) — different holdings can be labelled clearly
-  html+='<div class="finsec"><h3 class="sec" style="margin-top:0">Farm identity</h3><p class="sub" style="margin:0 0 12px">Name, location and notes for this holding (size, crops, or site). Useful when you manage more than one farm.</p>';
-  if(fin || state.admin){
-    html+='<div class="salecard" style="margin-bottom:0"><div class="grid2">'
-      +'<div class="field"><label for="farm-name">Farm name</label><input type="text" id="farm-name" maxlength="80" value="'+esc(state.settings.farmName||"")+'" placeholder="e.g. Brumac Main, North Paddock"></div>'
-      +'<div class="field"><label for="farm-location">Location / area</label><input type="text" id="farm-location" maxlength="120" value="'+esc(state.settings.location||"")+'" placeholder="Town, county or site"></div>'
-      +'<div class="field full"><label for="farm-notes">Notes <span class="hint">(size, crops, herds, etc.)</span></label><textarea id="farm-notes" maxlength="500" placeholder="Acres, main crops, herd size…">'+esc(state.settings.farmNotes||"")+'</textarea></div>'
-      +'</div><div class="error" id="farmid-err" role="alert" hidden></div><button class="btn" style="margin-top:12px" id="savefarmid" data-act="save-farm-identity">Save farm details</button></div>';
-  } else {
-    const nm=state.settings.farmName||"Not set", loc=state.settings.location||"—", notes=state.settings.farmNotes||"";
-    html+='<div class="landgrid"><div><div class="meta">Farm name</div><div class="nm">'+esc(nm)+'</div></div><div><div class="meta">Location</div><div class="nm">'+esc(loc)+'</div></div>'
-      +(notes?'<div class="field full" style="grid-column:1/-1"><div class="meta">Notes</div><div class="nm">'+esc(notes)+'</div></div>':"")+'</div>';
-  }
-  html+='</div>';
+  // 1. Inputs & farm expenditures (includes the farm identity)
+  let lf=state.costLand; if(lf!=="all"&&lf!=="none"&&!findLand(lf)) lf="all";
+  const costs=state.costs.filter(c=>lf==="all"||(lf==="none"?!c.landId:c.landId===lf)).sort((a,b)=>b.date<a.date?-1:b.date>a.date?1:0);
+  let costTotal=0; costs.forEach(c=>costTotal+=c.amount);
+  const nm=state.settings.farmName, loc=state.settings.location, notes=state.settings.farmNotes;
+  let b='<div class="subhead"><h4>Farm identity</h4>'+(canId?'<button class="btn ghost small" data-act="identity-edit">Edit</button>':'')+'</div>'
+    +'<div class="idcard"><div class="idrow"><div><div class="meta">Farm name</div><div class="nm">'+esc(nm||"Not set")+'</div></div>'
+    +'<div><div class="meta">Location</div><div class="nm">'+esc(loc||"Not set")+'</div></div></div>'
+    +(notes?'<div class="idnotes"><div class="meta">Notes</div><div>'+esc(notes)+'</div></div>':'')+'</div>'
+    +'<div class="subhead"><h4>Expenditure records</h4>'+(fin?'<button class="btn small" data-act="cost-add" data-land="'+(lf!=="all"&&lf!=="none"?esc(lf):"")+'">Add expenditure</button>':'')+'</div>'
+    +landChipsHTML()
+    +'<p class="sub" style="margin:-4px 0 12px">Seeds, land preparation, fertilizer, manure, herbicides, pesticides, veterinary, transport, equipment, utilities, feed and any other cost, each recorded on its own.</p>';
+  if(!costs.length) b+='<div class="emptycard">No costs recorded yet.</div>';
+  else b+='<div class="cardgrid">'+costs.map(c=>costCardHTML(c,fin)).join("")+'</div><p class="sumline">Total (loaded months): <b>'+fmtKES(costTotal)+'</b></p>';
+  html+=accItemHTML("inputs","Inputs & farm expenditures",esc(state.settings.farmName?state.settings.farmName+" · ":"")+costs.length+(costs.length===1?" record":" records")+" · "+esc(fmtKES(costTotal)),b);
 
-  html+='<div class="finsec"><h3 class="sec">Permanent staff</h3>'
-    +(state.staff.length?'<div class="ledger">'+state.staff.map(staffRowHTML).join("")+'</div>':'<div class="ledger"><div class="empty"><p>No permanent staff added yet.</p></div></div>')
-    +(fin?'<p style="margin-top:10px"><button class="btn ghost small" data-act="staff-add">Add staff</button></p>':"")+'</div>';
+  // 2. Permanent staff
+  let monthly=0, daily=0; state.staff.forEach(s=>{ if(s.period==="daily") daily+=s.wage; else monthly+=s.wage; });
+  const staffBits=[]; if(monthly>0) staffBits.push(fmtKES(monthly)+" / month"); if(daily>0) staffBits.push(fmtKES(daily)+" / day");
+  b='<div class="subhead"><h4>Staff list</h4>'+(fin?'<button class="btn small" data-act="staff-add">Add staff</button>':'')+'</div>'
+    +(state.staff.length?'<div class="cardgrid">'+state.staff.map(staffRowHTML).join("")+'</div>':'<div class="emptycard">No permanent staff added yet.</div>');
+  html+=accItemHTML("staff","Permanent staff",state.staff.length+(state.staff.length===1?" member":" members")+(staffBits.length?" · "+esc(staffBits.join(" + ")):""),b);
 
-  html+='<div class="finsec"><h3 class="sec">Casual labourers</h3><div class="logbar" style="margin-bottom:10px"><p class="sub" style="margin:0">Add each casual separately, including the task and wage.</p><div class="field"><label for="casualdate">Date</label><input type="date" id="casualdate" max="'+todayStr()+'" value="'+state.casualDate+'"></div></div>';
-  if(fin){
-    html+='<form id="casualworkerform" class="salecard" novalidate><div class="grid2"><div class="field"><label for="cw-name">Casual worker name</label><input id="cw-name" type="text" maxlength="80" required></div><div class="field"><label for="cw-wage">Daily wage (KES)</label><input id="cw-wage" type="number" min="0" step="any" value="0" required></div><div class="field full"><label for="cw-task">Task description</label><textarea id="cw-task" maxlength="500" required placeholder="e.g. Cleaning the cowshed, cutting Napier grass..."></textarea></div></div><div class="error" id="cw-err" hidden></div><button class="btn" type="submit">Add casual worker</button></form>';
-  }
+  // 3. Casual labourers (for the chosen date)
   const workers=state.casualWorkers.filter(w=>w.work_date===state.casualDate);
-  html+=workers.length?'<div class="ledger">'+workers.map(w=>'<div class="rolerow"><div><div class="nm">'+esc(w.worker_name)+'</div><div class="meta">'+esc(w.task_description)+'</div><div class="meta">'+fmtKES(Number(w.daily_wage))+' · '+esc(fmtDate(w.work_date))+'</div></div>'+(fin?'<div class="pactions" style="margin:0"><button class="btn ghost small" data-act="casual-edit" data-id="'+esc(w.id)+'">Edit</button><button class="btn danger small" data-act="casual-delete" data-id="'+esc(w.id)+'">Remove</button></div>':'')+'</div>').join("")+'</div>':'<div class="ledger"><div class="empty"><p>No casual workers recorded for this date.</p></div></div>';
   const laborTotal=workers.reduce((sum,w)=>sum+Number(w.daily_wage||0),0);
-  html+='<p class="sumline">Casual labour total: <b>'+fmtKES(laborTotal)+'</b> · '+workers.length+' worker(s)</p></div>';
-
-  html+='<div class="finsec"><h3 class="sec">Land</h3><div class="landgrid">';
+  b='<div class="subhead"><h4>Casual workers</h4><div class="field" style="min-width:160px"><label for="casualdate">Date</label><input type="date" id="casualdate" max="'+todayStr()+'" value="'+state.casualDate+'"></div></div>';
   if(fin){
-    html+='<div class="field"><label for="land-cpa">Cost of land hire per acre <span class="hint">(KES)</span></label><input type="number" id="land-cpa" inputmode="decimal" min="0" step="any" value="'+esc(state.land.costPerAcre)+'"></div>'
-      +'<div class="field"><label for="land-acres">Total acres hired</label><input type="number" id="land-acres" inputmode="decimal" min="0" step="any" value="'+esc(state.land.acresHired)+'"></div>'
-      +'<div class="field full" style="grid-column:1/-1"><div class="error" id="landerr" role="alert" hidden></div><button class="btn" id="saveland" data-act="save-land">Save land details</button></div>';
-  } else {
-    html+='<div><div class="meta">Cost per acre</div><div class="nm">'+fmtKES(state.land.costPerAcre)+'</div></div><div><div class="meta">Acres hired</div><div class="nm">'+fmtL(state.land.acresHired)+'</div></div>';
+    b+='<form id="casualworkerform" class="salecard" novalidate><div class="grid2"><div class="field"><label for="cw-name">Casual worker name</label><input id="cw-name" type="text" maxlength="80" required></div><div class="field"><label for="cw-wage">Daily wage (KES)</label><input id="cw-wage" type="number" min="0" step="any" value="0" required></div><div class="field full"><label for="cw-task">Task description</label><textarea id="cw-task" maxlength="500" required placeholder="e.g. Cleaning the cowshed, cutting Napier grass..."></textarea></div></div><div class="error" id="cw-err" hidden></div><button class="btn" type="submit" style="margin-top:12px">Add casual worker</button></form>';
   }
-  html+='</div><p class="sumline">Total land cost: <b>'+fmtKES(state.land.costPerAcre*state.land.acresHired)+'</b></p></div>';
+  b+=workers.length?'<div class="cardgrid">'+workers.map(w=>casualCardHTML(w,fin)).join("")+'</div>':'<div class="emptycard">No casual workers recorded for '+esc(fmtDate(state.casualDate))+'.</div>';
+  b+='<p class="sumline">Casual labour total: <b>'+fmtKES(laborTotal)+'</b> · '+workers.length+' worker(s)</p>';
+  html+=accItemHTML("casual","Casual labourers",workers.length+(workers.length===1?" worker":" workers")+" on "+esc(fmtDate(state.casualDate,{day:"numeric",month:"short"}))+" · "+esc(fmtKES(laborTotal)),b);
 
-  html+='<div class="finsec"><div class="logbar"><div><h3 class="sec" style="margin:0">Inputs and farm expenditures</h3><p class="sub">Seeds, land preparation, fertilizer, manure, herbicides, pesticides, veterinary, transport, equipment, utilities, feed and any other cost — each recorded independently.</p></div>'
-    +(fin?'<button class="btn" data-act="cost-add">Add expenditure</button>':"")+'</div>';
-  const costs=state.costs.slice().sort((a,b)=>b.date<a.date?-1:b.date>a.date?1:0);
-  if(!costs.length){
-    html+='<div class="ledger"><div class="empty"><p>No costs recorded yet.</p></div></div>';
-  } else {
-    let total=0; costs.forEach(c=>total+=c.amount);
-    html+='<div class="scroll"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th>'+(fin?"<th></th>":"")+'</tr></thead><tbody>'
-      +costs.map(c=>'<tr><td>'+esc(fmtDate(c.date,{day:"numeric",month:"short"}))+'</td><td>'+esc(label(COST_CATS,c.category))+'</td><td>'+esc(c.description||"—")+'</td><td>'+fmtKES(c.amount)+'</td>'+(fin?'<td><button class="btn ghost small" data-act="cost-delete" data-id="'+esc(c.id)+'">Remove</button></td>':"")+'</tr>').join("")
-      +'</tbody><tfoot><tr><td colspan="3">Total (loaded months)</td><td>'+fmtKES(total)+'</td>'+(fin?"<td></td>":"")+'</tr></tfoot></table></div>';
-  }
+  // 4. Farm lands
+  const totAcres=state.lands.reduce((x,l)=>x+l.acres,0), totHire=totalLandHire();
+  b='<div class="subhead"><h4>Your lands</h4>'+(fin?'<button class="btn small" data-act="land-add">Add land</button>':'')+'</div>'
+    +(state.lands.length
+      ?'<div class="cardgrid">'+state.lands.map(l=>landCardHTML(l,fin)).join("")+'</div>'
+        +'<div class="cardgrid tiles" style="margin-top:12px"><div class="fcard"><div class="meta">Total acres</div><div class="amt">'+esc(fmtL(totAcres))+'</div></div><div class="fcard hl"><div class="meta">Total land hire</div><div class="amt">'+esc(fmtKES(totHire))+'</div></div></div>'
+      :'<div class="emptycard">No lands added yet. Add each piece of land to record its costs separately.</div>');
+  html+=accItemHTML("land","Farm lands",state.lands.length+(state.lands.length===1?" land":" lands")+" · "+esc(fmtL(totAcres))+" acres · "+esc(fmtKES(totHire)),b);
+
   html+='</div>';
   el.innerHTML=html;
 }
@@ -1685,13 +1906,13 @@ function renderDaily(){
     if(!state.sale.time) state.sale.time=nowClock();
     state.sale.product=inShop?state.sale.product:"milk";
     el.innerHTML='<div class="logbar"><div><h2>'+(inShop?"Shop sales":"Milk sales")+'</h2><p class="sub">'
-      +(inShop?"Record what was sold at the shop, and when.":"Record milk sold, and when.")+' Each sale lowers the stock. Past days need a receipt photo.</p></div>'
+      +(inShop?"Record what was sold at the shop, and when.":"Record milk sold, and when.")+' Each sale lowers the stock. '+(inShop?"Sales for past days need a receipt photo.":"Every milk sale needs a receipt photo.")+'</p></div>'
       +'<div class="field"><label for="dailydate">Date</label><input type="date" id="dailydate" max="'+todayStr()+'"></div></div>'
       +'<form id="saleform" class="salecard" novalidate><div class="grid3">'
       +(inShop?'<div class="field"><label for="s-product-search">Product</label><div class="combo" id="s-product-combo"><input type="search" id="s-product-search" placeholder="Search or choose a product…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="s-product-menu"><button type="button" class="combo-caret" data-act="toggle-product-menu" aria-label="Show products" tabindex="-1">▾</button><div class="combo-menu" id="s-product-menu" role="listbox" hidden></div></div></div>':'')
       +'<div class="field"><label for="s-qty">Quantity <span class="hint" id="s-unit"></span></label><input type="number" id="s-qty" inputmode="decimal" min="0" step="any" placeholder="0"></div>'
       +'<div class="field"><label for="s-time">Time of sale</label><input type="time" id="s-time"></div></div>'
-      +'<div class="field" id="receipt-field" hidden style="margin-top:12px"><label for="s-receipt">Receipt photo <span class="hint">(required for past days)</span></label><input type="file" id="s-receipt" accept="image/*" capture="environment"></div>'
+      +'<div class="field" id="receipt-field" hidden style="margin-top:14px">'+receiptFieldHTML()+'</div>'
       +'<div class="saleinfo" id="saleinfo"></div><div class="error" id="saleerr" role="alert" hidden></div>'
       +'<button type="submit" class="btn" id="salebtn">Record sale</button></form>'
       +'<div id="salenote"></div>'+(inShop?"":'<div class="salecard"><h3 class="sec" style="margin-top:0">Milk use and distribution</h3><p class="sub">Record spoilt milk, home/staff use, calf milk, co-op deliveries and direct sales.</p><form id="allocform" novalidate><input type="hidden" id="alloc-id"><div class="grid2"><div class="field"><label for="alloc-type">Destination</label><select id="alloc-type"><option value="spoilt">Spoilt milk</option><option value="home_staff">Home / staff use</option><option value="calves">Calves</option><option value="coop">Sold to co-op society</option><option value="direct">Sold directly to end user</option></select></div><div class="field"><label for="alloc-qty">Quantity (litres)</label><input id="alloc-qty" type="number" min="0.01" step="any" required></div><div class="field"><label for="alloc-price">Price per litre (KES)</label><input id="alloc-price" type="number" min="0" step="any" value="'+esc(milkPrice())+'"'+(state.admin?"":" disabled")+'></div><div class="field"><label for="alloc-customer">Buyer / notes</label><input id="alloc-customer" type="text" maxlength="200" placeholder="Co-op, customer, or notes"></div></div><div class="error" id="allocerr" hidden></div><div class="pactions"><button class="btn" type="submit" id="alloc-save">Save milk allocation</button><button class="btn ghost" type="button" id="alloc-cancel" data-act="cancel-allocation-edit" hidden>Cancel edit</button></div></form><div id="milk-balance-summary" class="note" style="margin-top:12px"></div><div id="alloc-history"></div></div>')+'<div id="dailybody"></div>';
@@ -1811,7 +2032,8 @@ function refreshSaleForm(){
   const isToday=state.salesDate===todayStr();
   $("#saleform").hidden=false;
   const receiptField=$("#receipt-field");
-  if(receiptField) receiptField.hidden=isToday;
+  if(receiptField) receiptField.hidden=!receiptRequired();
+  renderReceiptPreview();
   $("#salenote").innerHTML=isToday
     ? ""
     : '<div class="note">Recording a sale for a previous day. Attach a clear photo of the receipt — it is required.</div>';
@@ -1864,8 +2086,8 @@ function renderDailyBody(){
     +day.length+(day.length===1?" sale":" sales")+'.</p>';
   html+='<h3 class="sec" style="margin-top:0">Sales by time</h3><div class="ledger">'+day.map(x=>{
     const unit=productUnit(x), nm=productName(x);
-    const receiptBtn=x.receipt?'<button class="btn ghost small" data-act="view-receipt" data-path="'+esc(x.receipt)+'">Receipt</button>':"";
-    return '<div class="sale"><div><div class="nm">'+esc(fmtClock(x.ts))+', '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'</div><div class="meta">at '+esc(fmtKES(x.p))+' a '+unit+(x.receipt?" · receipt attached":"")+'</div></div>'
+    const receiptBtn=x.receipt?'<button class="rcpt-btn" data-act="view-receipt" data-path="'+esc(x.receipt)+'" data-sale="'+esc(x.id)+'" aria-label="View receipt">'+RC_ICON+'Receipt</button>':(x.kind==="milk"?'<span class="pill due">No receipt</span>':"");
+    return '<div class="sale"><div><div class="nm">'+esc(fmtClock(x.ts))+', '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'</div><div class="meta">at '+esc(fmtKES(x.p))+' a '+unit+'</div></div>'
       +'<div class="saleamt">'+esc(fmtKES(x.qty*x.p))+receiptBtn+(can("remove_sales")?'<button class="btn ghost small" data-act="remove-sale" data-id="'+esc(x.id)+'" aria-label="Remove sale of '+esc(fmtL(x.qty))+' '+unit+' of '+esc(nm)+'">Remove</button>':"")+'</div></div>';
   }).join("")+'</div>';
   html+='<h3 class="sec">Totals by product</h3><div class="scroll"><table><thead><tr><th>Product</th><th>Quantity sold</th><th>Amount</th></tr></thead><tbody>'
@@ -1893,11 +2115,14 @@ async function recordSaleFromForm(){
   const dayParts=state.salesDate.split("-").map(Number);
   const when=new Date(dayParts[0],dayParts[1]-1,dayParts[2],t[0],t[1],0,0);
   if(when.getTime()>Date.now()+5*60000) return fail("The time can't be in the future.");
-  const fileInput=$("#s-receipt");
-  const file=fileInput&&fileInput.files&&fileInput.files[0];
-  if(!isToday&&!file) return fail("Attach a photo of the receipt for sales on previous days.");
-  if(file&&file.size>5*1024*1024) return fail("Receipt photo must be under 5 MB.");
-  btn.disabled=true; btn.textContent=file?"Uploading receipt…":"Recording…";
+  let file=receiptRequired()?state.receiptFile:null;
+  if(receiptRequired()&&!file) return fail(p.kind==="milk"?"Attach a photo of the receipt. Every milk sale needs one.":"Attach a photo of the receipt for sales on previous days.");
+  btn.disabled=true; btn.textContent=file?"Preparing receipt…":"Recording…";
+  if(file){
+    file=await compressReceipt(file);
+    if(file.size>5*1024*1024){ btn.disabled=false; btn.textContent="Record sale"; return fail("Receipt photo must be under 5 MB."); }
+    btn.textContent="Uploading receipt…";
+  }
   try{
     let receiptPath=null;
     if(file){
@@ -1919,7 +2144,7 @@ async function recordSaleFromForm(){
     state.sale.qty=""; state.sale.time=nowClock(); state.sale.query=""; state.sale.open=false; state.sale.hi=0;
     if($("#s-qty")) $("#s-qty").value="";
     if($("#s-time")) $("#s-time").value=state.sale.time;
-    if(fileInput) fileInput.value="";
+    setReceiptFile(null);
     await loadCore();
     await loadMonth(monthOf(state.salesDate));
     if(monthOf(state.salesDate)!==monthOf(todayStr())) await loadMonth(monthOf(todayStr()));
@@ -1935,14 +2160,83 @@ async function removeSale(id){
   try{ await loadCore(); await Promise.all(Array.from(state.loadedMonths).map(loadMonth)); }catch(e){}
   scheduleRender();
 }
-async function viewReceipt(path){
-  if(!path) return;
+/* ----- Receipt photo: picker, preview and viewer ----- */
+let receiptPreviewUrl=null;
+const RC_ICON='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>';
+const CAM_ICON='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+const UP_ICON='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>';
+function fmtSize(b){ return b>=1048576 ? (b/1048576).toFixed(1)+" MB" : Math.max(1,Math.round(b/1024))+" KB"; }
+function receiptRequired(){ return state.section==="farm" || state.salesDate!==todayStr(); }
+function receiptFieldHTML(){
+  return '<div class="rc-label"><span>Receipt photo</span> <span class="hint" id="rc-hint"></span></div>'
+    +'<div class="dz" id="receipt-dz">'
+    +'<div class="dz-empty" id="dz-empty"><div class="dz-ico">'+RC_ICON+'</div><div class="dz-text"><b>Add the receipt</b><span>Take a photo or upload one. On a computer you can drag a file here.</span></div></div>'
+    +'<div class="dz-actions" id="dz-actions"><label class="btn small" for="s-receipt-cam">'+CAM_ICON+' Take photo</label><label class="btn ghost small" for="s-receipt">'+UP_ICON+' Upload</label></div>'
+    +'<div class="dz-preview" id="dz-preview" hidden><img id="dz-thumb" class="dz-thumb" alt="Receipt preview"><div class="dz-info"><b id="dz-name"></b><span id="dz-size"></span><span class="dz-ok">Ready to attach</span></div>'
+    +'<div class="dz-btns"><label class="btn ghost small" for="s-receipt">Replace</label><button type="button" class="btn danger small" data-act="receipt-clear">Remove</button></div></div>'
+    +'<input type="file" id="s-receipt-cam" accept="image/*" capture="environment" hidden><input type="file" id="s-receipt" accept="image/*" hidden></div>';
+}
+function setReceiptFile(f){
+  state.receiptFile=f||null;
+  const er=$("#saleerr"); if(er) er.hidden=true;
+  renderReceiptPreview();
+}
+function renderReceiptPreview(){
+  const box=$("#dz-preview"); if(!box) return;
+  if(receiptPreviewUrl){ URL.revokeObjectURL(receiptPreviewUrl); receiptPreviewUrl=null; }
+  const f=state.receiptFile;
+  box.hidden=!f; $("#dz-empty").hidden=!!f; $("#dz-actions").hidden=!!f;
+  $("#receipt-dz").classList.toggle("has-file",!!f);
+  const hint=$("#rc-hint");
+  if(hint) hint.textContent=state.section==="farm"?"(required for every milk sale)":"(required for past days)";
+  if(f){
+    receiptPreviewUrl=URL.createObjectURL(f);
+    $("#dz-thumb").src=receiptPreviewUrl;
+    $("#dz-name").textContent=f.name||"Receipt photo";
+    $("#dz-size").textContent=fmtSize(f.size);
+  }
+}
+// Shrink big phone photos before upload (keeps them readable, well under the 5 MB limit)
+async function compressReceipt(file){
   try{
-    const {data,error}=await sb.storage.from("receipts").createSignedUrl(path,300);
+    if(!/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
+    const bmp=await createImageBitmap(file);
+    const scale=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+    if(scale===1&&file.size<=1.5*1024*1024){ if(bmp.close) bmp.close(); return file; }
+    const c=document.createElement("canvas"); c.width=Math.round(bmp.width*scale); c.height=Math.round(bmp.height*scale);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height); if(bmp.close) bmp.close();
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.82));
+    if(!blob||blob.size>=file.size) return file;
+    return new File([blob],(file.name||"receipt").replace(/\.[^.]+$/,"")+".jpg",{type:"image/jpeg"});
+  }catch(e){ return file; }
+}
+function receiptViewerHTML(s){
+  const x=state.sales.find(v=>v.id===s.saleId);
+  const unit=x?productUnit(x):"";
+  const rows=x?'<div class="rcpt-rows"><div><span>Item</span><b>'+esc(productName(x))+'</b></div>'
+    +'<div><span>Quantity</span><b>'+esc(fmtL(x.qty))+' '+esc(unit)+'</b></div>'
+    +'<div><span>Price</span><b>'+esc(fmtKES(x.p))+' / '+esc(unit)+'</b></div>'
+    +'<div class="tot"><span>Total</span><b>'+esc(fmtKES(x.qty*x.p))+'</b></div></div>':'';
+  const body=s.loading ? '<div class="rcpt-state"><div class="spin" aria-hidden="true"></div><span>Loading receipt…</span></div>'
+    : s.err ? '<div class="error" style="margin:0 20px 16px">Couldn\'t open the receipt. '+esc(s.err)+'</div>'
+    : '<a class="rcpt-img" href="'+esc(s.url)+'" target="_blank" rel="noopener" title="Open full size"><img src="'+esc(s.url)+'" alt="Photo of the receipt for this sale"></a>';
+  return '<div class="rcpt"><div class="rcpt-top"><div class="rcpt-badge">'+RC_ICON+'</div><div><div class="rcpt-title">Receipt</div>'
+    +'<div class="rcpt-sub">'+(x?esc(fmtDate(x.d,{weekday:"short",day:"numeric",month:"short",year:"numeric"}))+' · '+esc(fmtClock(x.ts)):'')+'</div></div></div>'
+    +rows+body
+    +'<div class="actions rcpt-actions">'+(s.url?'<a class="btn ghost" href="'+esc(s.url)+'" target="_blank" rel="noopener">Open full size</a>':'')+'<button class="btn" data-act="close">Close</button></div></div>';
+}
+async function viewReceipt(path,saleId){
+  if(!path) return;
+  state.dlg={mode:"receipt",path:path,saleId:saleId||"",url:"",loading:true,err:""};
+  renderDialog(); openDlg();
+  try{
+    const {data,error}=await sb.storage.from("receipts").createSignedUrl(path,600);
     if(error) throw error;
-    if(data&&data.signedUrl) window.open(data.signedUrl,"_blank","noopener");
-    else toast("Couldn't open the receipt.",true);
-  }catch(e){ toast("Couldn't open the receipt. "+friendly(e),true); }
+    if(!data||!data.signedUrl) throw new Error("No link returned");
+    if(state.dlg&&state.dlg.mode==="receipt"&&state.dlg.path===path){ state.dlg.url=data.signedUrl; state.dlg.loading=false; renderDialog(); }
+  }catch(e){
+    if(state.dlg&&state.dlg.mode==="receipt"&&state.dlg.path===path){ state.dlg.loading=false; state.dlg.err=friendly(e); renderDialog(); }
+  }
 }
 
 /* ----- Cost log: daily, weekly, monthly and annual input/labour costs ----- */
@@ -2126,6 +2420,30 @@ async function moveRole(id,dir){
 }
 
 /* ----- Summary ----- */
+// What the farm spent in a month: feed, casual labour, permanent staff, land hire and recorded expenditures
+function farmCostsFor(m){
+  const dim=daysInMonth(m), cur=m===todayStr().slice(0,7);
+  let feed=0;
+  for(const k in state.feed){
+    const i=k.indexOf("|"); if(k.slice(i+1,i+8)!==m) continue;
+    const f=state.feed[k];
+    feed+=f.silage*f.silageCost+f.other*f.otherCost+f.meal*f.mealCost+f.supplement*f.supplementCost;
+  }
+  const casual=state.casualWorkers.filter(w=>monthOf(w.work_date)===m).reduce((a,w)=>a+Number(w.daily_wage||0),0);
+  const days=cur?parseInt(todayStr().slice(8,10),10):dim;
+  const staff=state.staff.filter(s=>s.active!==false).reduce((a,s)=>a+(s.period==="daily"?s.wage*days:s.wage),0);
+  const land=totalLandHire();
+  const other=state.costs.filter(c=>monthOf(c.date)===m).reduce((a,c)=>a+c.amount,0);
+  feed=round2(feed);
+  return {feed:feed,casual:round2(casual),staff:round2(staff),land:round2(land),other:round2(other),total:round2(feed+casual+staff+land+other)};
+}
+function pctOf(profit,rev){ return rev>0 ? num(profit/rev*100)+"%" : "–"; }
+function marginCardHTML(title,profit,rev,cost,costWord,cls){
+  return '<div class="mcard '+(cls||"")+'"><div class="mlbl">'+esc(title)+'</div>'
+    +'<div class="mval'+(profit<0?" neg":"")+'">'+esc(fmtKES(profit))+'</div>'
+    +'<div class="mpct">'+esc(pctOf(profit,rev))+' margin</div>'
+    +'<div class="meqn">'+esc(fmtKES(rev))+' sales − '+esc(fmtKES(cost))+' '+esc(costWord)+'</div></div>';
+}
 function renderSummary(){
   const el=$("#view-summary");
   if(!state.ready){ el.innerHTML=""; return; }
@@ -2137,6 +2455,7 @@ function renderSummary(){
     ensureMonth(m);
     el.innerHTML=html+'<div class="note" style="margin-top:14px">Loading '+esc(monthLabel(m))+'…</div>'; return;
   }
+  const showM=canSeeCosts();
   const perDay=new Array(dim).fill(0), perCowMap={};
   let totalKes=0;
   for(const k in state.milk){
@@ -2174,23 +2493,54 @@ function renderSummary(){
   for(const e of state.sales){
     if(monthOf(e.d)!==m||e.kind!=="cereal") continue;
     if(!findCereal(e.cerealId)) continue;
-    const a=agg[e.cerealId]||(agg[e.cerealId]={name:productName(e),cerealId:e.cerealId,unit:productUnit(e),qty:0,kes:0}); a.qty+=e.qty; a.kes+=e.qty*e.p;
+    const a=agg[e.cerealId]||(agg[e.cerealId]={name:productName(e),cerealId:e.cerealId,unit:productUnit(e),qty:0,kes:0,cost:0});
+    a.qty+=e.qty; a.kes+=e.qty*e.p; a.cost+=saleCost(e);
   }
   const list=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>b.kes-a.kes);
-  let shopKes=0;
+  let shopKes=0, shopCost=0;
   if(!list.length){
     html+='<div class="ledger"><div class="empty"><p>Nothing was sold at the shop in '+esc(monthLabel(m))+'.</p></div></div>';
   } else {
-    list.forEach(a=>{ shopKes+=a.kes; });
-    html+='<div class="scroll"><table><thead><tr><th>Product</th><th>Quantity sold</th><th>Sales value</th><th>Left in stock now</th></tr></thead><tbody>'
+    list.forEach(a=>{ shopKes+=a.kes; shopCost+=a.cost; });
+    html+='<div class="scroll"><table><thead><tr><th>Product</th><th>Quantity sold</th><th>Total sales</th>'+(showM?'<th>Buying cost</th><th>Profit</th>':'')+'<th>Left in stock now</th></tr></thead><tbody>'
       +list.map(a=>{
-        const left=(findCereal(a.cerealId)||{qty:0}).qty;
-        return '<tr><td>'+esc(a.name)+'</td><td>'+fmtL(a.qty)+' '+a.unit+'</td><td>'+fmtKES(a.kes)+'</td><td>'+fmtL(Math.max(0,left))+' '+a.unit+'</td></tr>';
+        const left=(findCereal(a.cerealId)||{qty:0}).qty, pr=a.kes-a.cost;
+        return '<tr><td>'+esc(a.name)+'</td><td>'+fmtL(a.qty)+' '+a.unit+'</td><td>'+fmtKES(a.kes)+'</td>'
+          +(showM?'<td>'+fmtKES(a.cost)+'</td><td class="'+(pr<0?"negtxt":"")+'">'+fmtKES(pr)+'</td>':'')
+          +'<td>'+fmtL(Math.max(0,left))+' '+a.unit+'</td></tr>';
       }).join("")
-      +'</tbody><tfoot><tr><td>All shop products</td><td></td><td>'+fmtKES(shopKes)+'</td><td></td></tr></tfoot></table></div>';
+      +'</tbody><tfoot><tr><td>All shop products</td><td></td><td>'+fmtKES(shopKes)+'</td>'+(showM?'<td>'+fmtKES(shopCost)+'</td><td>'+fmtKES(shopKes-shopCost)+'</td>':'')+'<td></td></tr></tfoot></table></div>'
+      +'<p class="sub" style="margin-top:8px">Total sales = selling price × quantity sold. Buying cost = buying price × quantity sold.</p>';
   }
 
   html+='<div class="total" style="position:static;margin-top:28px"><div><div class="eq">Total revenue for '+esc(monthLabel(m))+'</div><div class="big">'+fmtKES(milkAgg.kes+shopKes)+'</div><div class="eq">'+fmtKES(milkAgg.kes)+' from milk, '+fmtKES(shopKes)+' from the shop</div></div></div>';
+
+  if(showM){
+    const fc=farmCostsFor(m);
+    const shopProfit=round2(shopKes-shopCost), farmProfit=round2(milkAgg.kes-fc.total), grand=round2(shopProfit+farmProfit);
+    const rev=milkAgg.kes+shopKes;
+    html+='<h3 class="sec">Profit margins</h3><div class="mgrid">'
+      +marginCardHTML("Shop margin",shopProfit,shopKes,shopCost,"cost of goods","")
+      +marginCardHTML("Farm margin",farmProfit,milkAgg.kes,fc.total,"farm costs","")
+      +marginCardHTML("Grand margin",grand,rev,shopCost+fc.total,"total costs","grand")
+      +'</div>'
+      +'<p class="sub" style="margin-top:10px">Shop margin = shop sales − (buying price × quantity sold). Farm margin = milk sales − all farm costs for the month. Grand margin = shop margin + farm margin.</p>'
+      +'<h3 class="sec">Farm costs for '+esc(monthLabel(m))+'</h3><div class="scroll"><table><thead><tr><th>Cost</th><th>Amount</th></tr></thead><tbody>'
+      +'<tr><td>Feed (silage, fodder, dairy meal, supplements)</td><td>'+fmtKES(fc.feed)+'</td></tr>'
+      +'<tr><td>Casual labour</td><td>'+fmtKES(fc.casual)+'</td></tr>'
+      +'<tr><td>Permanent staff</td><td>'+fmtKES(fc.staff)+'</td></tr>'
+      +'<tr><td>Land hire</td><td>'+fmtKES(fc.land)+'</td></tr>'
+      +'<tr><td>Inputs & other expenditures</td><td>'+fmtKES(fc.other)+'</td></tr>'
+      +'</tbody><tfoot><tr><td>Total farm costs</td><td>'+fmtKES(fc.total)+'</td></tr></tfoot></table></div>';
+    if(state.lands.length){
+      const mc=state.costs.filter(c=>monthOf(c.date)===m);
+      const rows=state.lands.map(l=>({name:l.name,hire:landHire(l),exp:mc.filter(c=>c.landId===l.id).reduce((a,c)=>a+c.amount,0)}));
+      const un=mc.filter(c=>!c.landId||!findLand(c.landId)).reduce((a,c)=>a+c.amount,0);
+      if(un>0) rows.push({name:"Not tied to a land",hire:0,exp:un});
+      html+='<h3 class="sec">Costs by land</h3><div class="scroll"><table><thead><tr><th>Land</th><th>Land hire</th><th>Expenditures</th><th>Total</th></tr></thead><tbody>'
+        +rows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+fmtKES(r.hire)+'</td><td>'+fmtKES(r.exp)+'</td><td><b>'+fmtKES(r.hire+r.exp)+'</b></td></tr>').join("")+'</tbody></table></div>';
+    }
+  }
   el.innerHTML=html;
 }
 
@@ -2204,7 +2554,7 @@ function openMilkEdit(){ state.dlg={mode:"milk-edit"}; renderDialog(); openDlg()
 function openRoleForm(id){ state.dlg={mode:"role-form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("r-name"); if(f) f.focus(); }
 function openCerealForm(id){ state.dlg={mode:"cereal-form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("c-name"); if(f) f.focus(); }
 function openStaffForm(id){ state.dlg={mode:"staff-form",id:id||null}; renderDialog(); openDlg(); const f=document.getElementById("st-name"); if(f) f.focus(); }
-function openCostForm(){ state.dlg={mode:"cost-form"}; renderDialog(); openDlg(); const f=document.getElementById("co-amount"); if(f) f.focus(); }
+function openCostForm(id,land){ state.dlg={mode:"cost-form",id:id||null,land:land||""}; renderDialog(); openDlg(); const f=document.getElementById("co-amount"); if(f) f.focus(); }
 
 function renderDialog(){
   const d=$("#dlg"), s=state.dlg; if(!s) return;
@@ -2217,7 +2567,14 @@ function renderDialog(){
   if(s.mode==="role-confirm"){ const r=state.roles.find(x=>x.id===s.id); if(!r){ closeDlg(); return; } d.innerHTML=roleConfirmHTML(r); return; }
   if(s.mode==="staff-form"){ d.innerHTML=staffFormHTML(s.id?state.staff.find(x=>x.id===s.id):null); return; }
   if(s.mode==="staff-confirm"){ const st=state.staff.find(x=>x.id===s.id); if(!st){ closeDlg(); return; } d.innerHTML=staffConfirmHTML(st); return; }
-  if(s.mode==="cost-form"){ d.innerHTML=costFormHTML(); return; }
+  if(s.mode==="cost-form"){ d.innerHTML=costFormHTML(s.id?findCost(s.id):null); return; }
+  if(s.mode==="cost-confirm"){ const c=findCost(s.id); if(!c){ closeDlg(); return; } d.innerHTML=costConfirmHTML(c); return; }
+  if(s.mode==="casual-form"){ const w=findCasualWorker(s.id); if(!w){ closeDlg(); return; } d.innerHTML=casualFormHTML(w); return; }
+  if(s.mode==="casual-confirm"){ const w=findCasualWorker(s.id); if(!w){ closeDlg(); return; } d.innerHTML=casualConfirmHTML(w); return; }
+  if(s.mode==="land-form"){ d.innerHTML=landFormHTML(s.id?findLand(s.id):null); return; }
+  if(s.mode==="land-confirm"){ const l=findLand(s.id); if(!l){ closeDlg(); return; } d.innerHTML=landConfirmHTML(l); return; }
+  if(s.mode==="identity-form"){ d.innerHTML=identityFormHTML(); return; }
+  if(s.mode==="receipt"){ d.innerHTML=receiptViewerHTML(s); return; }
   if(s.mode==="profile"){ d.innerHTML=ownCardHTML(s.note); return; }
   if(s.mode==="profile-edit"){ d.innerHTML=profileFormHTML(); return; }
   if(s.mode==="profile-email"){ d.innerHTML=emailFormHTML(); return; }
@@ -2625,7 +2982,15 @@ document.addEventListener("click",e=>{
     case "role-up": moveRole(a.dataset.id,-1); break;
     case "role-down": moveRole(a.dataset.id,1); break;
     case "remove-sale": removeSale(a.dataset.id); break;
-    case "view-receipt": viewReceipt(a.dataset.path); break;
+    case "view-receipt": viewReceipt(a.dataset.path,a.dataset.sale); break;
+    case "receipt-clear": setReceiptFile(null); break;
+    case "acc-toggle": {
+      const key=a.dataset.key, item=a.closest(".acc-item"), isOpen=!state.farmOpen[key];
+      state.farmOpen[key]=isOpen;
+      if(item) item.classList.toggle("open",isOpen);
+      a.setAttribute("aria-expanded",String(isOpen));
+      break;
+    }
     case "toggle-product-menu": {
       const inp=$("#s-product-search");
       state.sale.open=!state.sale.open;
@@ -2673,8 +3038,14 @@ document.addEventListener("click",e=>{
     case "staff-edit": openStaffForm(a.dataset.id); break;
     case "staff-ask-delete": state.dlg={mode:"staff-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
     case "staff-delete": deleteStaff(); break;
-    case "cost-add": openCostForm(); break;
-    case "cost-delete": deleteCost(a.dataset.id); break;
+    case "cost-add": openCostForm(null,a.dataset.land); break;
+    case "cost-land-filter": state.costLand=a.dataset.id; renderFarm(); break;
+    case "land-add": state.dlg={mode:"land-form",id:null}; renderDialog(); openDlg(); { const f=document.getElementById("ld-name"); if(f) f.focus(); } break;
+    case "land-ask-delete": state.dlg={mode:"land-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
+    case "land-delete": deleteLand(); break;
+    case "cost-edit": openCostForm(a.dataset.id); break;
+    case "cost-ask-delete": state.dlg={mode:"cost-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
+    case "cost-delete": deleteCost(); break;
     case "refresh-costlog": loadCostReport(); break;
     case "clear-shop-search":
       state.shopQuery="";
@@ -2687,10 +3058,11 @@ document.addEventListener("click",e=>{
       renderHerdList();
       break;
     case "save-casual": saveCasual(); break;
-    case "casual-edit": editCasualWorker(a.dataset.id); break;
-    case "casual-delete": deleteCasualWorker(a.dataset.id); break;
-    case "save-land": saveLand(); break;
-    case "save-farm-identity": saveFarmIdentity(); break;
+    case "casual-edit": state.dlg={mode:"casual-form",id:a.dataset.id}; renderDialog(); openDlg(); { const f=document.getElementById("ce-name"); if(f) f.focus(); } break;
+    case "casual-ask-delete": state.dlg={mode:"casual-confirm",id:a.dataset.id}; renderDialog(); openDlg(); break;
+    case "casual-delete": deleteCasualWorker(); break;
+    case "land-edit": state.dlg={mode:"land-form",id:a.dataset.id}; renderDialog(); openDlg(); { const f=document.getElementById("ld-name"); if(f) f.focus(); } break;
+    case "identity-edit": state.dlg={mode:"identity-form"}; renderDialog(); openDlg(); { const f=document.getElementById("farm-name"); if(f) f.focus(); } break;
     case "prev-month": state.month=shiftMonth(state.month,-1); renderSummary(); break;
     case "next-month": state.month=shiftMonth(state.month,1); renderSummary(); break;
   }
@@ -2758,6 +3130,11 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
   const t=e.target;
+  if(t.id==="s-receipt"||t.id==="s-receipt-cam"){
+    const f=t.files&&t.files[0];
+    if(f){ if(/^image\//.test(f.type)||/\.(heic|heif)$/i.test(f.name)) setReceiptFile(f); else toast("Choose a photo of the receipt.",true); }
+    t.value=""; return;
+  }
   if(t.id==="assignrole"){ assignRole(t.dataset.user,t.value||null); return; }
 
   if(t.id==="dailydate"){
@@ -2854,6 +3231,9 @@ document.addEventListener("submit",e=>{
   else if(id==="roleform"){ e.preventDefault(); saveRole(); }
   else if(id==="staffform"){ e.preventDefault(); saveStaff(); }
   else if(id==="costform"){ e.preventDefault(); saveCost(); }
+  else if(id==="casualeditform"){ e.preventDefault(); saveCasualEdit(); }
+  else if(id==="landform"){ e.preventDefault(); saveLand(); }
+  else if(id==="identityform"){ e.preventDefault(); saveFarmIdentity(); }
   else if(id==="profileform"){ e.preventDefault(); saveProfile(); }
   else if(id==="membercreateform"){ e.preventDefault(); createMember(); }
   else if(id==="emailform"){ e.preventDefault(); changeEmail(); }
@@ -2862,6 +3242,14 @@ document.addEventListener("submit",e=>{
   else if(id==="forgotform"){ e.preventDefault(); doForgot(); }
   else if(id==="signupform"){ e.preventDefault(); doSignUp(); }
   else if(id==="recoveryform"){ e.preventDefault(); doRecovery(); }
+});
+document.addEventListener("dragover",e=>{ const z=e.target.closest&&e.target.closest("#receipt-dz"); if(z){ e.preventDefault(); z.classList.add("drag"); } });
+document.addEventListener("dragleave",e=>{ const z=e.target.closest&&e.target.closest("#receipt-dz"); if(z&&!z.contains(e.relatedTarget)) z.classList.remove("drag"); });
+document.addEventListener("drop",e=>{
+  const z=e.target.closest&&e.target.closest("#receipt-dz"); if(!z) return;
+  e.preventDefault(); z.classList.remove("drag");
+  const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(f&&/^image\//.test(f.type)) setReceiptFile(f); else if(f) toast("Choose a photo of the receipt.",true);
 });
 $("#dlg").addEventListener("click",e=>{ if(e.target===$("#dlg")) closeDlg(); });
 $("#dlg").addEventListener("close",()=>{ state.dlg=null; });
